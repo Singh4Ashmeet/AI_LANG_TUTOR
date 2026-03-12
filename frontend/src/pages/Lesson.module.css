@@ -1,0 +1,275 @@
+.page {
+  display: grid;
+  gap: 20px;
+  animation: slideUp 0.6s ease;
+}
+
+.loading {
+  color: var(--subtext);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), rgba(88, 204, 2, 0.3));
+}
+
+.hearts {
+  display: flex;
+  gap: 6px;
+}
+
+.heart {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.full {
+  color: var(--heart);
+}
+
+.exercise {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  box-shadow: var(--shadow);
+}
+
+.prompt {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.audioButton {
+  width: max-content;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.choiceGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.choice {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.choiceActive {
+  border-color: rgba(88, 204, 2, 0.7);
+  box-shadow: var(--glow);
+}
+
+.inputRow input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.matchGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.matchRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.matchRow select {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.voice {
+  display: grid;
+  gap: 8px;
+}
+
+.voice button {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.voiceStatus {
+  color: var(--subtext);
+  font-size: 12px;
+}
+
+.order {
+  display: grid;
+  gap: 10px;
+}
+
+.orderChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orderAnswer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+}
+
+.wordChip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+}
+
+.secondary {
+  width: max-content;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+}
+
+.primary {
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  width: max-content;
+}
+
+.feedback {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow);
+}
+
+.correct {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.incorrect {
+  color: var(--error);
+  font-weight: 700;
+}
+
+.explanation {
+  color: var(--subtext);
+  font-size: 13px;
+}
+
+.tips {
+  display: grid;
+  gap: 16px;
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.tipCard h2 {
+  font-family: var(--font-display);
+}
+
+.tipHeader {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.examples {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.exampleRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--soft);
+  font-size: 13px;
+}
+
+.tipControls {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tipControls button {
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .matchRow {
+    grid-template-columns: 1fr;
+  }
+}
+

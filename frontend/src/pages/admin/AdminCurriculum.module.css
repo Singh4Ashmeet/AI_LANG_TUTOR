@@ -1,0 +1,83 @@
+.page {
+  display: grid;
+  gap: 18px;
+}
+
+.header p {
+  color: #94a3b8;
+}
+
+.list {
+  display: grid;
+  gap: 14px;
+}
+
+.card {
+  background: #111827;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardHeader p {
+  color: #94a3b8;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #e5e7eb;
+}
+
+.preview {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.section {
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.skills {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.skill {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+}
+
+.skill p {
+  color: #94a3b8;
+  margin: 4px 0 0;
+}
+

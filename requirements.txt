@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+motor
+python-jose
+passlib
+pydantic
+pydantic-settings
+httpx
+email-validator
+python-multipart
+faster-whisper
+edge-tts
+aiosmtplib
+slowapi
+pyotp
+bcrypt
+cryptography

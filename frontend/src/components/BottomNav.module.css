@@ -1,0 +1,41 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 10px 12px 14px;
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
+  backdrop-filter: blur(16px);
+  z-index: 30;
+}
+
+.link {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  color: var(--subtext);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.active {
+  color: var(--text);
+  background: var(--soft);
+}
+
+.icon {
+  font-size: 18px;
+}
+
+@media (min-width: 960px) {
+  .nav {
+    display: none;
+  }
+}
+

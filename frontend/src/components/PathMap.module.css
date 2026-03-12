@@ -1,0 +1,141 @@
+.map {
+  position: relative;
+  padding: 20px 0 60px;
+}
+
+.pathLine {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(88, 204, 2, 0.8), rgba(59, 130, 246, 0.3));
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+.nodes {
+  display: grid;
+  gap: 28px;
+}
+
+.node {
+  display: grid;
+  justify-items: center;
+}
+
+.align0 {
+  justify-items: start;
+}
+
+.align1 {
+  justify-items: center;
+}
+
+.align2 {
+  justify-items: end;
+}
+
+.skill {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  width: min(200px, 70vw);
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skill:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glow);
+}
+
+.skillEmoji {
+  font-size: 26px;
+}
+
+.skillTitle {
+  font-weight: 600;
+}
+
+.crown {
+  font-size: 12px;
+  color: var(--subtext);
+}
+
+.lock {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 14px;
+}
+
+.locked {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.active {
+  animation: pulseGlow 2.4s infinite;
+  border-color: rgba(88, 204, 2, 0.7);
+}
+
+.chest {
+  justify-items: center;
+}
+
+.chestShell {
+  position: relative;
+  width: 86px;
+  height: 64px;
+  animation: floatUp 3s ease-in-out infinite;
+}
+
+.chestLid {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 24px;
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.9), rgba(255, 183, 77, 0.6));
+  border-radius: 10px;
+}
+
+.chestBody {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.8), rgba(255, 138, 101, 0.65));
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.chestLabel {
+  font-size: 12px;
+  color: var(--subtext);
+  margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+  .pathLine {
+    left: 46%;
+  }
+
+  .align0 {
+    justify-items: start;
+  }
+
+  .align2 {
+    justify-items: start;
+  }
+}
+

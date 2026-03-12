@@ -1,0 +1,68 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header p {
+  color: var(--subtext);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.row {
+  display: grid;
+  gap: 6px;
+}
+
+.row select,
+.row input {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.goalButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.goalButtons button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.active {
+  border-color: rgba(88, 204, 2, 0.7);
+  box-shadow: var(--glow);
+}
+
+.primary {
+  width: max-content;
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+

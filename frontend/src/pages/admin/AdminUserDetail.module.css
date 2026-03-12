@@ -1,0 +1,105 @@
+.page {
+  display: grid;
+  gap: 18px;
+}
+
+.loading {
+  color: #cbd5f5;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111827;
+  border-radius: 14px;
+  padding: 16px 20px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.header p {
+  color: #94a3b8;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.active {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.suspended {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.panel {
+  background: #111827;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.formGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.formGrid label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.formGrid select {
+  padding: 8px 10px;
+  background: #0a0f1e;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #e5e7eb;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusRow button {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: transparent;
+  color: #e5e7eb;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actions button {
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.secondary {
+  background: transparent;
+  color: #cbd5f5;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+

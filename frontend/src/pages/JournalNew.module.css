@@ -1,0 +1,36 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header p {
+  color: var(--subtext);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+textarea {
+  min-height: 220px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+button {
+  width: max-content;
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+

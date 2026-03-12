@@ -1,0 +1,29 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header p {
+  color: var(--subtext);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.content {
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: var(--subtext);
+}
+

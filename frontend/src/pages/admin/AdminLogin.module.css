@@ -1,0 +1,67 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #0a0f1e;
+  color: #e5e7eb;
+  font-family: "Space Grotesk", sans-serif;
+  padding: 32px;
+}
+
+.card {
+  width: min(420px, 90vw);
+  background: #111827;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(3, 7, 18, 0.5);
+  display: grid;
+  gap: 18px;
+}
+
+.heading h1 {
+  margin: 6px 0;
+}
+
+.heading p {
+  color: #94a3b8;
+}
+
+.pill {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #60a5fa;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #0a0f1e;
+  color: #e5e7eb;
+}
+
+.form button {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 13px;
+}
+

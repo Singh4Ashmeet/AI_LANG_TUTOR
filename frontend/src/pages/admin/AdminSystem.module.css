@@ -1,0 +1,172 @@
+.page {
+  display: grid;
+  gap: 18px;
+}
+
+.header p {
+  color: #94a3b8;
+}
+
+.panel {
+  background: #111827;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.envGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.envRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.ok {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.missing {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actions button {
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #e5e7eb;
+}
+
+.primary {
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: max-content;
+}
+
+.danger {
+  background: #ef4444;
+  color: #0a0f1e;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.helper {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.totp {
+  display: grid;
+  gap: 10px;
+}
+
+.totp img {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.formRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.formRow input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #0a0f1e;
+  color: #e5e7eb;
+}
+
+.formRow button {
+  border: none;
+  background: #3b82f6;
+  color: #0a0f1e;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.sessionsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: 0.8fr 1.4fr 0.8fr 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  align-items: center;
+}
+
+.tableHeader {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.tableRow {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+@media (max-width: 960px) {
+  .tableHeader {
+    display: none;
+  }
+
+  .tableRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+

@@ -1,0 +1,28 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header p {
+  color: var(--subtext);
+}
+
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.loading {
+  color: var(--subtext);
+}
+
