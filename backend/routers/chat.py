@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from ..database import admin_logs_collection, grammar_stats_collection, sessions_collection, users_collection, vocabulary_collection
 from ..dependencies import get_current_user
 from ..services.learner import award_xp, update_streak
-from ..services.agents import call_conversation_tutor, call_error_analyst, call_feedback_coach
+from ..services.agents import call_conversation_tutor, call_error_analyst, call_feedback_coach, call_summary_agent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -116,6 +116,12 @@ async def chat(payload: ChatRequest, background_tasks: BackgroundTasks, user=Dep
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
+    # Get previous context
+    history = session.get("messages", [])[-10:] # Get last 10 messages
+    messages = [{"role": item["role"], "content": item["content"]} for item in history]
+    messages.append({"role": "user", "content": payload.message})
+
+    # Analyze user message
     analysis = await call_error_analyst([{"role": "user", "content": payload.message}], user)
     errors = analysis.get("errors", [])
     new_vocab = analysis.get("new_vocabulary", [])
@@ -128,30 +134,26 @@ async def chat(payload: ChatRequest, background_tasks: BackgroundTasks, user=Dep
         "new_vocabulary": new_vocab,
     }
 
-    await sessions_collection().update_one(
-        {"_id": session["_id"]},
-        {"$push": {"messages": user_message}},
-    )
-    await _record_errors(user, errors)
-    await _record_vocabulary(user, new_vocab, payload.message)
-
-    history = session.get("messages", [])[-6:]
-    messages = [{"role": item["role"], "content": item["content"]} for item in history if item.get("role") in {"user", "assistant"}]
-    messages.append({"role": "user", "content": payload.message})
+    # Generate reply
     reply = await call_conversation_tutor(messages, user)
 
     assistant_message = {
         "role": "assistant",
         "content": reply,
         "timestamp": datetime.now(timezone.utc),
-        "errors": [],
-        "new_vocabulary": [],
     }
 
+    # Atomic update to push both messages
     await sessions_collection().update_one(
         {"_id": session["_id"]},
-        {"$push": {"messages": assistant_message}},
+        {"$push": {"messages": {"$each": [user_message, assistant_message]}}},
     )
+
+    # Background tasks
+    if errors:
+        await _record_errors(user, errors)
+    if new_vocab:
+        await _record_vocabulary(user, new_vocab, payload.message)
 
     return {
         "reply": reply,
@@ -168,33 +170,48 @@ async def end_session(session_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
     end_time = datetime.now(timezone.utc)
-    duration = int((end_time - session["started_at"]).total_seconds())
-    await sessions_collection().update_one(
-        {"_id": session["_id"]},
-        {"$set": {"ended_at": end_time, "duration_seconds": duration}},
-    )
+    # Handle legacy sessions that might not have started_at
+    start_time = session.get("started_at") or end_time
+    duration = int((end_time - start_time).total_seconds())
+
+    # Generate Summary
+    messages = session.get("messages", [])
+    conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+    
+    summary_prompt = [
+        {"role": "user", "content": f"Summarize this conversation and provide feedback:\n{conversation_text}"}
+    ]
+    
+    summary_data = await call_summary_agent(summary_prompt, user)
+    
+    # Fallback if AI fails to return dict
+    if not isinstance(summary_data, dict):
+        summary_data = {
+            "summary": "Great conversation practice!",
+            "key_vocabulary_used": [],
+            "grammar_tips": ["Keep practicing!"]
+        }
 
     updated_user = await users_collection().find_one({"_id": user["_id"]})
     updated_user = update_streak(updated_user)
     earned, leveled_up, new_level = award_xp(updated_user, base=50)
-    updated_user["updated_at"] = datetime.now(timezone.utc)
+    updated_user["updated_at"] = end_time
 
+    # Pop _id before update
+    updated_user.pop("_id", None)
     await users_collection().update_one({"_id": user["_id"]}, {"$set": updated_user})
-    await sessions_collection().update_one({"_id": session["_id"]}, {"$set": {"xp_earned": earned}})
-
-    summary_prompt = {
-        "role": "user",
-        "content": json.dumps(
-            {
-                "session_type": "tutor_chat",
-                "messages": session.get("messages", []),
-                "errors": [m.get("errors", []) for m in session.get("messages", []) if m.get("role") == "user"],
-                "new_vocabulary": [m.get("new_vocabulary", []) for m in session.get("messages", [])],
+    
+    await sessions_collection().update_one(
+        {"_id": session["_id"]}, 
+        {
+            "$set": {
+                "ended_at": end_time, 
+                "duration_seconds": duration,
+                "xp_earned": earned,
+                "summary": summary_data
             }
-        ),
-    }
-    coach_tip = await call_feedback_coach([summary_prompt], user)
-    await sessions_collection().update_one({"_id": session["_id"]}, {"$set": {"coach_tip": coach_tip, "conversation_summary": coach_tip}})
+        }
+    )
 
     return {
         "earned": earned,
@@ -202,7 +219,7 @@ async def end_session(session_id: str, user=Depends(get_current_user)):
         "streak": updated_user.get("streak", 0),
         "leveled_up": leveled_up,
         "cefr_level": new_level,
-        "summary": coach_tip,
+        "summary": summary_data,
     }
 
 

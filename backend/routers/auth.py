@@ -178,7 +178,7 @@ async def register(payload: RegisterRequest):
 
 @router.post("/login/credentials")
 @limiter.limit("3/hour")
-async def login_credentials(payload: LoginRequest, background_tasks: BackgroundTasks):
+async def login_credentials(request: Request, payload: LoginRequest, background_tasks: BackgroundTasks):
     email = payload.email.lower()
     if not allow_otp_request(email):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many OTP requests. Try again later.")
@@ -313,7 +313,7 @@ async def verify_totp(
 
 @router.post("/password/request-reset")
 @limiter.limit("3/hour")
-async def request_password_reset(payload: ResetRequest, background_tasks: BackgroundTasks):
+async def request_password_reset(request: Request, payload: ResetRequest, background_tasks: BackgroundTasks):
     email = payload.email.lower()
     if not allow_otp_request(email):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many OTP requests. Try again later.")

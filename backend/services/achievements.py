@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from bson import ObjectId
 
-from ..database import achievements_collection
+from ..database import achievements_collection, users_collection, notifications_collection
 
 ACHIEVEMENTS = [
     {"achievement_id": "first_lesson", "title": "First Lesson", "description": "Complete any lesson", "icon": "✅", "xp_reward": 10, "condition_type": "lessons", "condition_value": 1, "rarity": "common"},
@@ -36,3 +37,57 @@ async def seed_achievements() -> None:
             {"$setOnInsert": doc},
             upsert=True,
         )
+
+
+async def check_and_award_achievements(user_id: str) -> list[dict]:
+    user = await users_collection().find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return []
+
+    earned_ids = set(user.get("achievements", []))
+    all_achievements = await achievements_collection().find({}).to_list(length=100)
+    
+    newly_earned = []
+    now = datetime.now(timezone.utc)
+
+    for ach in all_achievements:
+        ach_id = ach["achievement_id"]
+        if ach_id in earned_ids:
+            continue
+        
+        condition_type = ach.get("condition_type")
+        condition_value = ach.get("condition_value")
+        is_met = False
+
+        if condition_type == "lessons":
+            if int(user.get("total_lessons_complete", 0)) >= int(condition_value):
+                is_met = True
+        elif condition_type == "streak":
+            if int(user.get("streak", 0)) >= int(condition_value):
+                is_met = True
+        elif condition_type == "xp":
+            if int(user.get("xp", 0)) >= int(condition_value):
+                is_met = True
+        # More complex conditions can be added here
+        
+        if is_met:
+            newly_earned.append(ach)
+            await users_collection().update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$addToSet": {"achievements": ach_id},
+                    "$inc": {"xp": ach.get("xp_reward", 0)}
+                }
+            )
+            # Create notification
+            await notifications_collection().insert_one({
+                "user_id": ObjectId(user_id),
+                "type": "achievement",
+                "title": f"Achievement Earned: {ach['title']}",
+                "message": ach["description"],
+                "icon": ach.get("icon", "🏆"),
+                "is_read": False,
+                "created_at": now
+            })
+
+    return newly_earned

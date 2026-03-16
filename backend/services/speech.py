@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from pathlib import Path
+from functools import partial
 
 from faster_whisper import WhisperModel
 import edge_tts
@@ -53,9 +54,14 @@ async def transcribe_audio(data: bytes) -> dict:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
             tmp.write(data)
             tmp_path = Path(tmp.name)
-        segments, info = model.transcribe(
-            str(tmp_path), vad_filter=True
+        
+        loop = asyncio.get_running_loop()
+        # model.transcribe is blocking, run in executor
+        segments, info = await loop.run_in_executor(
+            None, 
+            partial(model.transcribe, str(tmp_path), vad_filter=True)
         )
+        
         text = " ".join(segment.text.strip() for segment in segments)
         return {
             "text": text,

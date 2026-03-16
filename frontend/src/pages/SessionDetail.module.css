@@ -1,28 +1,93 @@
 .page {
-  display: grid;
-  gap: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header h2 {
+  font-size: 24px;
+  margin: 0;
+  color: #e2e8f0;
 }
 
 .header p {
-  color: var(--subtext);
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.summaryCard {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.summaryCard h3 {
+  margin: 0 0 12px 0;
+  color: #60a5fa;
+  font-size: 18px;
+}
+
+.summaryText {
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+
+.summarySection {
+  margin-top: 16px;
+}
+
+.summarySection h4 {
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tipList {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.tipList li {
+  color: #cbd5e1;
+  margin-bottom: 4px;
 }
 
 .card {
-  background: var(--card);
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  padding: 16px;
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .row {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.loading {
-  color: var(--subtext);
+.row strong {
+  text-transform: capitalize;
+  color: #94a3b8;
+  font-size: 12px;
 }
-

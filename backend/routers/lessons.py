@@ -11,6 +11,7 @@ from ..database import sessions_collection, users_collection
 from ..dependencies import get_current_user
 from ..services.agents import call_lesson_architect
 from ..services.learner import update_streak
+from ..services.achievements import check_and_award_achievements
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
 
@@ -157,6 +158,7 @@ async def complete_lesson(payload: LessonCompleteRequest, user=Depends(get_curre
     correct = len([ex for ex in exercises if ex.get("is_correct")])
     accuracy = int((correct / total) * 100) if total else 0
     earned = correct * 10
+    gems_earned = 5 if accuracy >= 90 else 2
     duration_seconds = int((datetime.now(timezone.utc) - session.get("started_at")).total_seconds())
 
     updated_user = await users_collection().find_one({"_id": user["_id"]})
@@ -164,11 +166,25 @@ async def complete_lesson(payload: LessonCompleteRequest, user=Depends(get_curre
     updated_user["xp"] = int(updated_user.get("xp", 0)) + earned
     updated_user["weekly_xp"] = int(updated_user.get("weekly_xp", 0)) + earned
     updated_user["total_xp"] = int(updated_user.get("total_xp", 0)) + earned
+    updated_user["gems"] = int(updated_user.get("gems", 0)) + gems_earned
     updated_user["total_lessons_complete"] = int(updated_user.get("total_lessons_complete", 0)) + 1
     updated_user["total_minutes_practiced"] = int(updated_user.get("total_minutes_practiced", 0)) + max(1, int(duration_seconds / 60))
     updated_user["updated_at"] = datetime.now(timezone.utc)
 
+    skill_id = str(session.get("skill_id"))
+    progress = updated_user.get("skill_progress", {})
+    skill_data = progress.get(skill_id, {"lessons": 0, "level": 0})
+    skill_data["lessons"] += 1
+    if skill_data["lessons"] >= 5:
+        skill_data["level"] += 1
+        skill_data["lessons"] = 0
+    progress[skill_id] = skill_data
+    updated_user["skill_progress"] = progress
+
+    # Pop _id before update
+    updated_user.pop("_id", None)
     await users_collection().update_one({"_id": user["_id"]}, {"$set": updated_user})
+    
     await sessions_collection().update_one(
         {"_id": session["_id"]},
         {
@@ -181,4 +197,6 @@ async def complete_lesson(payload: LessonCompleteRequest, user=Depends(get_curre
         },
     )
 
-    return {"earned": earned, "accuracy_percent": accuracy, "total_xp": updated_user.get("xp", 0)}
+    await check_and_award_achievements(str(user["_id"]))
+
+    return {"earned": earned, "gems_earned": gems_earned, "accuracy_percent": accuracy, "total_xp": updated_user.get("xp", 0)}

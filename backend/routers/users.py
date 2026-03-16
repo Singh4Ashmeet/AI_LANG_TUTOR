@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from ..auth import hash_password, verify_password
@@ -175,7 +175,7 @@ async def delete_account(payload: DeleteAccountRequest, user=Depends(get_current
 
 @router.post("/me/delete/request-otp")
 @limiter.limit("3/hour")
-async def request_delete_otp(background_tasks: BackgroundTasks, user=Depends(get_current_user)):
+async def request_delete_otp(request: Request, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     email = user.get("email")
     if not allow_otp_request(email):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many OTP requests. Try again later.")
@@ -357,3 +357,59 @@ async def session_detail(session_id: str, user=Depends(get_current_user)):
     session["_id"] = str(session["_id"])
     session["user_id"] = str(session["user_id"])
     return session
+
+
+@router.post("/me/refill-hearts")
+async def refill_hearts(user=Depends(get_current_user)):
+    if user.get("hearts", settings.max_hearts) >= settings.max_hearts:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Hearts are already full.")
+    
+    cost = 100
+    if user.get("gems", 0) < cost:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough gems.")
+    
+    await users_collection().update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"hearts": settings.max_hearts, "updated_at": datetime.now(timezone.utc)},
+            "$inc": {"gems": -cost}
+        }
+    )
+    return {"success": True, "hearts": settings.max_hearts, "gems_remaining": user.get("gems", 0) - cost}
+
+
+@router.post("/me/buy-freeze")
+async def buy_freeze(user=Depends(get_current_user)):
+    current_freezes = user.get("streak_freeze", 0)
+    if current_freezes >= 2:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Maximum streak freezes reached (2/2).")
+
+    cost = 200
+    if user.get("gems", 0) < cost:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough gems.")
+
+    await users_collection().update_one(
+        {"_id": user["_id"]},
+        {
+            "$inc": {"streak_freeze": 1, "gems": -cost},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        }
+    )
+    return {"success": True, "streak_freeze": current_freezes + 1, "gems_remaining": user.get("gems", 0) - cost}
+
+
+@router.get("/notifications")
+async def list_notifications(user=Depends(get_current_user)):
+    cursor = notifications_collection().find({"user_id": user["_id"]}).sort("created_at", -1).limit(50)
+    items = []
+    async for item in cursor:
+        item["_id"] = str(item["_id"])
+        item["user_id"] = str(item["user_id"])
+        items.append(item)
+    return {"items": items}
+
+
+@router.post("/notifications/read-all")
+async def read_all_notifications(user=Depends(get_current_user)):
+    await notifications_collection().update_many({"user_id": user["_id"]}, {"$set": {"is_read": True}})
+    return {"success": True}

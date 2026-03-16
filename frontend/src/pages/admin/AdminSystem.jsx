@@ -149,7 +149,7 @@ const AdminSystem = () => {
           </div>
           {sessions.map((session) => (
             <div key={session._id} className={styles.tableRow}>
-              <span>{session.user_id}</span>
+              <span className={styles.username}>{session.username || session.user_id}</span>
               <span>{session.device_info || "—"}</span>
               <span>{session.ip_address || "—"}</span>
               <span>{session.last_active ? new Date(session.last_active).toLocaleString() : "—"}</span>

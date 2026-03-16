@@ -224,3 +224,20 @@ async def call_story_narrator(messages: list[dict], user_context: dict) -> dict:
     if isinstance(parsed, dict):
         return parsed
     return {}
+
+
+async def call_summary_agent(messages: list[dict], user_context: dict) -> dict:
+    system_prompt = (
+        "You are a language tutor summarizing a practice session. "
+        "Return JSON: {summary, key_vocabulary_used, grammar_tips}. "
+        "Keep the summary encouraging but highlight areas for improvement."
+    )
+    try:
+        text = await _call_groq(messages, system_prompt, 0.4, 600)
+    except Exception as exc:
+        await _log_agent_error("summary_agent", "Groq failed", {"error": str(exc), "user_id": user_context.get("_id")})
+        text = await _call_gemini(messages, system_prompt, 0.4, 600)
+    parsed = _extract_json(text)
+    if isinstance(parsed, dict):
+        return parsed
+    return {}

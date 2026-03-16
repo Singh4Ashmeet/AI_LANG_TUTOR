@@ -1,54 +1,29 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../../api.js";
 import styles from "./AdminDashboard.module.css";
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({});
-  const [sessions, setSessions] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/admin/stats").then(setStats).catch(() => {});
-    api.get("/admin/sessions?limit=400").then((data) => setSessions(data.items || [])).catch(() => {});
-    api.get("/admin/users?limit=400").then((data) => setUsers(data.items || [])).catch(() => {});
+    api.get("/admin/stats")
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  const { sessionTypes, topLanguages, dailyActive } = useMemo(() => {
-    const typeMap = {};
-    const langMap = {};
-    const activeMap = {};
-    sessions.forEach((session) => {
-      const type = session.session_type || "unknown";
-      typeMap[type] = (typeMap[type] || 0) + 1;
-      if (session.started_at) {
-        const day = new Date(session.started_at).toISOString().slice(0, 10);
-        if (!activeMap[day]) activeMap[day] = new Set();
-        activeMap[day].add(session.user_id);
-      }
-    });
+  if (loading || !stats) {
+    return <div className={styles.loading}>Loading system pulse...</div>;
+  }
 
-    users.forEach((user) => {
-      const lang = user.target_language || "Unknown";
-      langMap[lang] = (langMap[lang] || 0) + 1;
-    });
-
-    const dailySeries = [];
-    for (let i = 29; i >= 0; i -= 1) {
-      const date = new Date();
-      date.setUTCDate(date.getUTCDate() - i);
-      const key = date.toISOString().slice(0, 10);
-      dailySeries.push({ date: key, value: activeMap[key] ? activeMap[key].size : 0 });
-    }
-
-    return {
-      sessionTypes: Object.entries(typeMap),
-      topLanguages: Object.entries(langMap).sort((a, b) => b[1] - a[1]).slice(0, 6),
-      dailyActive: dailySeries
-    };
-  }, [sessions, users]);
-
-  const maxDaily = Math.max(...dailyActive.map((item) => item.value), 1);
-  const maxType = Math.max(...sessionTypes.map((item) => item[1]), 1);
+  const dailyActive = stats.daily_active || [];
+  const maxDaily = Math.max(...dailyActive.map((d) => d.count), 1);
+  const sessionTypes = stats.session_types || [];
+  const maxType = Math.max(...sessionTypes.map((t) => t.count), 1);
+  const topLanguages = stats.top_languages || [];
 
   return (
     <div className={styles.page}>
@@ -56,69 +31,100 @@ const AdminDashboard = () => {
         <div>
           <div className={styles.eyebrow}>Admin dashboard</div>
           <h1>System pulse</h1>
-          <p>Live stats across LinguaAI in one glance.</p>
+          <p>Live stats across LinguAI in one glance.</p>
         </div>
       </header>
 
       <section className={styles.statsGrid}>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total users</div>
-          <div className={styles.statValue}>{stats.total_users ?? 0}</div>
+          <div className={styles.statValue}>{stats.total_users?.toLocaleString() ?? 0}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Active today</div>
-          <div className={styles.statValue}>{stats.active_today ?? 0}</div>
+          <div className={styles.statValue}>{stats.active_today?.toLocaleString() ?? 0}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Active this week</div>
-          <div className={styles.statValue}>{stats.active_week ?? 0}</div>
+          <div className={styles.statValue}>{stats.active_week?.toLocaleString() ?? 0}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>New this week</div>
-          <div className={styles.statValue}>{stats.new_registrations ?? 0}</div>
+          <div className={styles.statValue}>{stats.new_registrations?.toLocaleString() ?? 0}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total sessions</div>
-          <div className={styles.statValue}>{stats.total_sessions ?? 0}</div>
+          <div className={styles.statValue}>{stats.total_sessions?.toLocaleString() ?? 0}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Sessions today</div>
-          <div className={styles.statValue}>{stats.sessions_today ?? 0}</div>
+          <div className={styles.statValue}>{stats.sessions_today?.toLocaleString() ?? 0}</div>
         </div>
       </section>
 
       <section className={styles.charts}>
         <div className={styles.chartCard}>
-          <h3>Daily active users</h3>
-          <svg viewBox="0 0 300 120" className={styles.chart}>
-            <polyline
-              className={styles.chartLine}
-              points={dailyActive
-                .map((item, index) => {
-                  const x = (index / (dailyActive.length - 1 || 1)) * 280 + 10;
-                  const y = 100 - (item.value / maxDaily) * 80;
-                  return `${x},${y}`;
-                })
-                .join(" ")}
-            />
-            {dailyActive.map((item, index) => {
-              const x = (index / (dailyActive.length - 1 || 1)) * 280 + 10;
-              const y = 100 - (item.value / maxDaily) * 80;
-              return <circle key={item.date} cx={x} cy={y} r="2" className={styles.chartPoint} />;
-            })}
-          </svg>
+          <div className={styles.chartHeader}>
+            <h3>Daily active users</h3>
+            <span className={styles.chartSub}>Last 30 days</span>
+          </div>
+          <div className={styles.svgWrapper}>
+            <svg viewBox="0 0 400 160" className={styles.chart}>
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {/* Grid Lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+                <line
+                  key={p}
+                  x1="0"
+                  y1={140 - p * 120}
+                  x2="400"
+                  y2={140 - p * 120}
+                  stroke="rgba(148, 163, 184, 0.1)"
+                  strokeWidth="1"
+                />
+              ))}
+              {/* Area */}
+              <path
+                className={styles.chartArea}
+                fill="url(#areaGradient)"
+                d={`M 0 140 ${dailyActive
+                  .map((d, i) => {
+                    const x = (i / (dailyActive.length - 1)) * 400;
+                    const y = 140 - (d.count / maxDaily) * 120;
+                    return `L ${x} ${y}`;
+                  })
+                  .join(" ")} L 400 140 Z`}
+              />
+              {/* Line */}
+              <polyline
+                className={styles.chartLine}
+                points={dailyActive
+                  .map((d, i) => {
+                    const x = (i / (dailyActive.length - 1)) * 400;
+                    const y = 140 - (d.count / maxDaily) * 120;
+                    return `${x},${y}`;
+                  })
+                  .join(" ")}
+              />
+            </svg>
+          </div>
         </div>
 
         <div className={styles.chartCard}>
           <h3>Sessions by type</h3>
           <div className={styles.barList}>
-            {sessionTypes.map(([type, count]) => (
-              <div key={type} className={styles.barRow}>
-                <span>{type}</span>
+            {sessionTypes.map((st) => (
+              <div key={st.type} className={styles.barRow}>
+                <span className={styles.barLabel}>{st.type}</span>
                 <div className={styles.barTrack}>
-                  <div className={styles.barFill} style={{ width: `${(count / maxType) * 100}%` }} />
+                  <div className={styles.barFill} style={{ width: `${(st.count / maxType) * 100}%` }} />
                 </div>
-                <span className={styles.barValue}>{count}</span>
+                <span className={styles.barValue}>{st.count}</span>
               </div>
             ))}
           </div>
@@ -126,14 +132,14 @@ const AdminDashboard = () => {
 
         <div className={styles.chartCard}>
           <h3>Top target languages</h3>
-          <div className={styles.langList}>
-            {topLanguages.map(([lang, count]) => (
-              <div key={lang} className={styles.langRow}>
-                <div className={styles.langName}>{lang}</div>
+          <div className={styles.barList}>
+            {topLanguages.map((tl) => (
+              <div key={tl.lang} className={styles.barRow}>
+                <span className={styles.barLabel}>{tl.lang}</span>
                 <div className={styles.barTrack}>
-                  <div className={styles.barFill} style={{ width: `${Math.min(count * 10, 100)}%` }} />
+                  <div className={styles.barFill} style={{ width: `${(tl.count / stats.total_users || 1) * 100}%`, background: '#10b981' }} />
                 </div>
-                <div className={styles.barValue}>{count}</div>
+                <span className={styles.barValue}>{tl.count}</span>
               </div>
             ))}
           </div>
@@ -144,4 +150,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

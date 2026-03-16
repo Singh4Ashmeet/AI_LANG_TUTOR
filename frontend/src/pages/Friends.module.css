@@ -1,63 +1,136 @@
 .page {
-  display: grid;
-  gap: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header h2 {
+  font-size: 28px;
+  margin: 4px 0;
 }
 
 .header p {
-  color: var(--subtext);
+  color: #94a3b8;
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 2px;
   font-size: 12px;
-  color: var(--accent);
+  color: #3b82f6;
+  font-weight: 700;
 }
 
 .search {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  background: #111827;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .search input {
   flex: 1;
-  min-width: 200px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
   background: transparent;
-  color: var(--text);
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 16px;
 }
 
 .search button {
+  background: #3b82f6;
+  color: #0a0f1e;
   border: none;
-  background: var(--accent);
-  color: #0d140f;
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 8px 16px;
+  border-radius: 10px;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section h3 {
+  font-size: 18px;
+  color: #94a3b8;
+  margin: 0;
 }
 
 .list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .row {
-  background: var(--card);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  padding: 10px 12px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  background: #111827;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  transition: all 0.2s ease;
 }
 
-.row button {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  padding: 6px 10px;
-  border-radius: 10px;
+.row:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateX(4px);
 }
 
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.username {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.level,
+.lang {
+  font-size: 12px;
+  color: #60a5fa;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.addBtn {
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.removeBtn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.removeBtn:hover {
+  background: #ef4444;
+  color: #0a0f1e;
+}
+
+.empty {
+  color: #64748b;
+  font-style: italic;
+  font-size: 14px;
+}

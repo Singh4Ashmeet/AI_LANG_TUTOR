@@ -49,13 +49,44 @@ async def log_admin(event_type: str, message: str, admin_id: ObjectId | None, us
 async def stats(admin=Depends(require_admin)):
     today = datetime.now(timezone.utc).date()
     week_start = today - timedelta(days=7)
+    month_start = today - timedelta(days=30)
+    
     users = users_collection()
+    sessions = sessions_collection()
+    
     total_users = await users.count_documents({})
     active_today = await users.count_documents({"last_session_date": {"$gte": datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)}})
     active_week = await users.count_documents({"last_session_date": {"$gte": datetime.combine(week_start, datetime.min.time(), tzinfo=timezone.utc)}})
     new_registrations = await users.count_documents({"created_at": {"$gte": datetime.combine(week_start, datetime.min.time(), tzinfo=timezone.utc)}})
-    total_sessions = await sessions_collection().count_documents({})
-    sessions_today = await sessions_collection().count_documents({"started_at": {"$gte": datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)}})
+    total_sessions = await sessions.count_documents({})
+    sessions_today = await sessions.count_documents({"started_at": {"$gte": datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)}})
+    
+    # Daily Active Users (Last 30 days)
+    daily_active = []
+    for i in range(29, -1, -1):
+        day = today - timedelta(days=i)
+        day_dt = datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc)
+        next_day_dt = day_dt + timedelta(days=1)
+        count = await users.count_documents({"last_session_date": {"$gte": day_dt, "$lt": next_day_dt}})
+        daily_active.append({"date": day.isoformat(), "count": count})
+        
+    # Sessions by Type
+    pipeline = [
+        {"$group": {"_id": "$session_type", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    type_cursor = sessions.aggregate(pipeline)
+    session_types = [{"type": i["_id"] or "unknown", "count": i["count"]} async for i in type_cursor]
+
+    # Top Languages
+    lang_pipeline = [
+        {"$group": {"_id": "$target_language", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 6}
+    ]
+    lang_cursor = users.aggregate(lang_pipeline)
+    top_languages = [{"lang": i["_id"] or "Unknown", "count": i["count"]} async for i in lang_cursor]
+
     return {
         "total_users": total_users,
         "active_today": active_today,
@@ -63,6 +94,9 @@ async def stats(admin=Depends(require_admin)):
         "new_registrations": new_registrations,
         "total_sessions": total_sessions,
         "sessions_today": sessions_today,
+        "daily_active": daily_active,
+        "session_types": session_types,
+        "top_languages": top_languages,
     }
 
 
@@ -343,11 +377,26 @@ async def test_otp(admin=Depends(require_admin)):
 
 @router.get("/system/sessions")
 async def active_sessions(admin=Depends(require_admin)):
-    cursor = active_sessions_collection().find({"is_valid": True}).sort("last_active", -1)
+    pipeline = [
+        {"$match": {"is_valid": True}},
+        {"$sort": {"last_active": -1}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "_id",
+                "as": "user_info",
+            }
+        },
+        {"$unwind": "$user_info"},
+    ]
+    cursor = active_sessions_collection().aggregate(pipeline)
     items = []
     async for item in cursor:
         item["_id"] = str(item["_id"])
         item["user_id"] = str(item["user_id"])
+        item["username"] = item["user_info"].get("username", "Unknown")
+        item.pop("user_info", None)
         items.append(item)
     return {"items": items}
 

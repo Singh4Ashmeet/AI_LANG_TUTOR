@@ -148,6 +148,11 @@
   align-items: center;
 }
 
+.username {
+  font-weight: 700;
+  color: #60a5fa;
+}
+
 .tableHeader {
   text-transform: uppercase;
   letter-spacing: 1px;

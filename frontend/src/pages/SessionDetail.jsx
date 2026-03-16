@@ -21,6 +21,36 @@ const SessionDetail = () => {
         <h2>{session.session_type}</h2>
         <p>{new Date(session.started_at).toLocaleString()}</p>
       </header>
+
+      {session.summary && (
+        <div className={styles.summaryCard}>
+          <h3>AI Coach Summary</h3>
+          <p className={styles.summaryText}>{session.summary.summary}</p>
+          
+          {session.summary.key_vocabulary_used?.length > 0 && (
+            <div className={styles.summarySection}>
+              <h4>Key Vocabulary</h4>
+              <div className={styles.tags}>
+                {session.summary.key_vocabulary_used.map((word, i) => (
+                  <span key={i} className={styles.tag}>{word}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {session.summary.grammar_tips?.length > 0 && (
+            <div className={styles.summarySection}>
+              <h4>Grammar Tips</h4>
+              <ul className={styles.tipList}>
+                {session.summary.grammar_tips.map((tip, i) => (
+                  <li key={i}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className={styles.card}>
         {session.messages?.map((msg, idx) => (
           <div key={idx} className={styles.row}>
