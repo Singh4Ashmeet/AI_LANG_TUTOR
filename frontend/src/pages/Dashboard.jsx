@@ -24,14 +24,37 @@ const Dashboard = () => {
     () => Math.min(100, Math.round((minutesDone / goalMinutes) * 100)),
     [minutesDone, goalMinutes]
   );
+  const vocabTotal = Object.values(stats?.vocabulary || {}).reduce((sum, value) => sum + value, 0);
+  const quickStats = [
+    { label: "Weekly XP", value: stats?.weekly_xp ?? user?.weekly_xp ?? 0, tone: "blue" },
+    { label: "Words tracked", value: vocabTotal, tone: "gold" },
+    { label: "Lessons finished", value: stats?.total_lessons_complete ?? 0, tone: "green" },
+    { label: "Achievements", value: stats?.achievements_earned ?? 0, tone: "violet" }
+  ];
+  const practiceModes = [
+    { title: "Flashcards", text: "Recover weak vocabulary with spaced repetition.", to: "/practice/flashcards" },
+    { title: "Roleplay", text: "Jump into real-life conversations with AI characters.", to: "/roleplay" },
+    { title: "Journal", text: "Write a short entry and get feedback on fluency.", to: "/practice/journal" }
+  ];
 
   return (
     <div className={styles.page}>
       <div className={styles.hero}>
-        <div>
-          <div className={styles.eyebrow}>Today’s focus</div>
+        <div className={styles.heroCopy}>
+          <div className={styles.eyebrow}>Today's focus</div>
           <h1>Welcome back, {user?.username}</h1>
-          <p>Stay on the path and keep the streak alive.</p>
+          <p>
+            Your path is already moving. Keep the streak alive, hit your goal ring, and use practice modes that match
+            where you are right now.
+          </p>
+          <div className={styles.heroActions}>
+            <Link to="/practice/flashcards" className={styles.primaryAction}>
+              Start review
+            </Link>
+            <Link to="/practice" className={styles.secondaryAction}>
+              Open practice hub
+            </Link>
+          </div>
         </div>
         <div className={styles.goalCard}>
           <div
@@ -50,6 +73,52 @@ const Dashboard = () => {
         </div>
       </div>
 
+      <section className={styles.quickGrid}>
+        {quickStats.map((item) => (
+          <article key={item.label} className={`${styles.quickCard} ${styles[item.tone]}`}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </article>
+        ))}
+      </section>
+
+      <section className={styles.spotlightGrid}>
+        <article className={styles.spotlightCard}>
+          <div className={styles.cardEyebrow}>Momentum</div>
+          <h3>Your learner snapshot</h3>
+          <div className={styles.snapshotList}>
+            <div>
+              <strong>{stats?.xp ?? user?.xp ?? 0}</strong>
+              <span>Total XP in current level track</span>
+            </div>
+            <div>
+              <strong>{stats?.total_minutes_practiced ?? 0}m</strong>
+              <span>Total minutes practiced</span>
+            </div>
+            <div>
+              <strong>{stats?.streak_freeze ?? user?.streak_freeze ?? 0}</strong>
+              <span>Streak freezes available</span>
+            </div>
+          </div>
+        </article>
+
+        <article className={styles.spotlightCard}>
+          <div className={styles.cardEyebrow}>Recommended next</div>
+          <h3>Keep the engine warm</h3>
+          <div className={styles.recommendList}>
+            {practiceModes.map((mode) => (
+              <Link key={mode.title} to={mode.to} className={styles.recommendItem}>
+                <div>
+                  <strong>{mode.title}</strong>
+                  <span>{mode.text}</span>
+                </div>
+                <em>Open</em>
+              </Link>
+            ))}
+          </div>
+        </article>
+      </section>
+
       <section className={styles.wordSection}>
         <div className={styles.wordHeader}>
           <h2>Word of the day</h2>
@@ -62,7 +131,10 @@ const Dashboard = () => {
             <div className={styles.wordTitle}>{word?.word || "Loading..."}</div>
             <div className={styles.wordTranslation}>{word?.translation}</div>
             <div className={styles.wordExample}>{word?.example_sentence}</div>
-            <div className={styles.wordMeta}>{word?.part_of_speech}</div>
+            <div className={styles.wordMeta}>
+              <span>{word?.part_of_speech}</span>
+              <span>{word?.example_translation}</span>
+            </div>
           </div>
         )}
       </section>
@@ -72,11 +144,7 @@ const Dashboard = () => {
           <h2>Learning path</h2>
           <p>Follow the winding path and unlock each skill.</p>
         </div>
-        {curriculum?.sections ? (
-          <PathMap sections={curriculum.sections} user={user} />
-        ) : (
-          <div className={styles.loading}>Loading curriculum...</div>
-        )}
+        {curriculum?.sections ? <PathMap sections={curriculum.sections} user={user} /> : <div className={styles.loading}>Loading curriculum...</div>}
       </section>
 
       <Link className={styles.fab} to="/practice/flashcards">
@@ -87,4 +155,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

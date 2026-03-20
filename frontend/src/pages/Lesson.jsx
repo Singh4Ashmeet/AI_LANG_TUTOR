@@ -6,7 +6,8 @@ import styles from "./Lesson.module.css";
 
 const Lesson = () => {
   const navigate = useNavigate();
-  const { skill, n } = useParams();
+  const { skill, n, id } = useParams();
+  const skillId = Number(skill || id || 0);
   const { user } = useAuth();
   const lessonIndex = Number(n || 0);
   const [sessionId, setSessionId] = useState(null);
@@ -23,8 +24,20 @@ const Lesson = () => {
   const [tipCards, setTipCards] = useState([]);
   const [tipIndex, setTipIndex] = useState(0);
   const [showTips, setShowTips] = useState(false);
+  const [lessonMeta, setLessonMeta] = useState({});
   const recorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const speechLangMap = {
+    english: "en-US",
+    spanish: "es-ES",
+    french: "fr-FR",
+    german: "de-DE",
+    italian: "it-IT",
+    japanese: "ja-JP",
+    korean: "ko-KR",
+    hindi: "hi-IN",
+    portuguese: "pt-PT"
+  };
 
   const exercise = exercises[currentIndex];
   const type = Number(exercise?.type || 0);
@@ -33,47 +46,68 @@ const Lesson = () => {
 
   useEffect(() => {
     const loadTips = async () => {
-      if (lessonIndex === 0) {
-        const tipData = await api.get(`/curriculum/skill/${skill}`);
+      try {
+        const tipData = await api.get(`/curriculum/skill/${skillId}`);
         const tips = tipData.tip_cards || [];
         if (tips.length) {
           setTipCards(tips);
+          if (lessonIndex === 0) {
+            setShowTips(true);
+          }
+          return;
+        }
+      } catch (error) {
+        // fall back to lesson-level guidebook below
+      }
+
+      const lessonTips = lessonMeta.guidebook || [];
+      if (lessonTips.length) {
+        setTipCards(lessonTips);
+        if (lessonIndex === 0) {
           setShowTips(true);
         }
       }
     };
     loadTips().catch(() => {});
-  }, [skill, lessonIndex]);
+  }, [skillId, lessonIndex, lessonMeta.guidebook]);
 
   useEffect(() => {
     const loadLesson = async () => {
       if (!navigator.onLine) {
         const cache = JSON.parse(localStorage.getItem("offline_lessons") || "[]");
         const cached = cache.find(
-          (item) => Number(item.skill_id) === Number(skill) && Number(item.lesson_index) === lessonIndex
+          (item) => Number(item.skill_id) === skillId && Number(item.lesson_index) === lessonIndex
         );
         if (cached) {
           setExercises(cached.exercises || []);
           setSessionId(cached.session_id || null);
+          setLessonMeta(cached.lesson_meta || {});
         }
         return;
       }
 
-      const data = await api.post("/lessons/start", { skill_id: Number(skill), lesson_index: lessonIndex });
+      const data = await api.post("/lessons/start", { skill_id: skillId, lesson_index: lessonIndex });
       setSessionId(data.session_id);
       setExercises(data.exercises || []);
+      setLessonMeta(data.lesson_meta || {});
 
       const existing = JSON.parse(localStorage.getItem("offline_lessons") || "[]");
       const nextCache = [
-        { skill_id: Number(skill), lesson_index: lessonIndex, exercises: data.exercises, session_id: data.session_id },
+        {
+          skill_id: skillId,
+          lesson_index: lessonIndex,
+          exercises: data.exercises,
+          session_id: data.session_id,
+          lesson_meta: data.lesson_meta || {}
+        },
         ...existing.filter(
-          (item) => Number(item.skill_id) !== Number(skill) || Number(item.lesson_index) !== lessonIndex
+          (item) => Number(item.skill_id) !== skillId || Number(item.lesson_index) !== lessonIndex
         )
       ].slice(0, 2);
       localStorage.setItem("offline_lessons", JSON.stringify(nextCache));
     };
     loadLesson().catch(() => {});
-  }, [skill, lessonIndex]);
+  }, [skillId, lessonIndex]);
 
   const resetAnswerState = () => {
     setTextAnswer("");
@@ -106,7 +140,7 @@ const Lesson = () => {
   const playSpeech = (text) => {
     if (!text || !("speechSynthesis" in window)) return;
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "en-US";
+    utter.lang = speechLangMap[(user?.target_language || "").toLowerCase()] || "en-US";
     window.speechSynthesis.speak(utter);
   };
 
@@ -152,7 +186,7 @@ const Lesson = () => {
     const next = currentIndex + 1;
     if (next >= exercises.length) {
       const result = await api.post("/lessons/complete", { session_id: sessionId });
-      navigate("/lesson/complete", { state: { ...result, hearts } });
+      navigate("/lesson/complete", { state: { ...result, hearts, skill_id: skillId, lesson_index: lessonIndex } });
       return;
     }
     setCurrentIndex(next);
@@ -229,6 +263,8 @@ const Lesson = () => {
     return <div className={styles.loading}>Loading lesson...</div>;
   }
 
+  const heartsSafe = type === 1 || type === 10 || Boolean(exercise.safe_exercise);
+
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
@@ -244,7 +280,28 @@ const Lesson = () => {
         </div>
       </div>
 
+      <div className={styles.lessonIntro}>
+        <div className={styles.lessonMeta}>
+          <span className={styles.lessonBadge}>{exercise.stage || "practice"}</span>
+          <h1>{lessonMeta.lesson_focus || "Lesson"}</h1>
+          <p>{lessonMeta.teaching_objective || "Learn the concept, then use it step by step."}</p>
+          {lessonMeta.focus_reason && <div className={styles.focusReason}>{lessonMeta.focus_reason}</div>}
+        </div>
+        {tipCards.length > 0 && (
+          <button type="button" className={styles.guidebookButton} onClick={() => setShowTips(true)}>
+            Open guidebook
+          </button>
+        )}
+      </div>
+
       <div className={styles.exercise}>
+        <div className={styles.exerciseHeader}>
+          <div className={styles.exerciseMeta}>
+            <span className={styles.exerciseInstruction}>{exercise.instruction || "Work through the prompt"}</span>
+            {exercise.answer_mode && <span className={styles.answerMode}>{exercise.answer_mode}</span>}
+          </div>
+          <span className={styles.exerciseSafety}>{heartsSafe ? "No hearts lost here" : "Hearts at risk"}</span>
+        </div>
         <div className={styles.prompt}>{exercise.content || exercise.prompt || "Exercise"}</div>
         {exercise.audio_text && (
           <button type="button" className={styles.audioButton} onClick={() => playSpeech(exercise.audio_text)}>
@@ -352,12 +409,15 @@ const Lesson = () => {
         {feedback && (
           <div className={styles.feedback}>
             <div className={feedback.is_correct ? styles.correct : styles.incorrect}>
-              {feedback.is_correct ? "Correct!" : "Not quite."}
+              {feedback.accepted_with_typo ? "Accepted with a spelling fix" : feedback.is_correct ? "Correct!" : "Not quite."}
             </div>
+            {feedback.encouragement && <div className={styles.encouragement}>{feedback.encouragement}</div>}
             {!feedback.is_correct && (
               <div className={styles.explanation}>Correct answer: {String(feedback.correct_answer)}</div>
             )}
             {feedback.explanation && <div className={styles.explanation}>{feedback.explanation}</div>}
+            {feedback.hint && <div className={styles.hint}>Hint: {feedback.hint}</div>}
+            {feedback.grammar_tip && <div className={styles.grammarTip}>{feedback.grammar_tip}</div>}
             <button type="button" className={styles.primary} onClick={continueLesson}>
               Continue
             </button>
@@ -369,4 +429,3 @@ const Lesson = () => {
 };
 
 export default Lesson;
-

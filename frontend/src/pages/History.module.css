@@ -9,9 +9,36 @@
 
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-size: 11px;
   color: var(--accent);
+  font-weight: 800;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--card) 86%, #101927), color-mix(in srgb, var(--card) 82%, #2b1f11));
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 8px;
+}
+
+.summaryCard span {
+  color: var(--subtext);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.summaryCard strong {
+  font-size: 28px;
 }
 
 .list {
@@ -20,17 +47,50 @@
 }
 
 .card {
-  background: var(--card);
-  border-radius: 16px;
+  background: linear-gradient(150deg, var(--card), color-mix(in srgb, var(--card) 84%, #111c2c));
+  border-radius: 18px;
   border: 1px solid var(--border);
-  padding: 12px 14px;
-  display: flex;
-  justify-content: space-between;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
   color: var(--text);
+  box-shadow: var(--shadow);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.cardMain {
+  display: grid;
+  gap: 4px;
+}
+
+.cardMain strong {
+  text-transform: capitalize;
+}
+
+.cardMain span,
+.meta {
+  color: var(--subtext);
+}
+
+.cardStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cardStats span {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .meta {
-  color: var(--subtext);
   font-size: 12px;
 }
-

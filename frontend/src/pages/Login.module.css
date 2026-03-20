@@ -1,22 +1,127 @@
 .page {
-  min-height: 70vh;
+  min-height: 100vh;
   display: grid;
   place-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.glowA,
+.glowB {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(6px);
+}
+
+.glowA {
+  width: 38vw;
+  height: 38vw;
+  min-width: 260px;
+  min-height: 260px;
+  left: -10vw;
+  top: -8vw;
+  background: radial-gradient(circle, rgba(88, 204, 2, 0.28), transparent 68%);
+  animation: floatUp 6s ease-in-out infinite;
+}
+
+.glowB {
+  width: 34vw;
+  height: 34vw;
+  min-width: 240px;
+  min-height: 240px;
+  right: -6vw;
+  bottom: -8vw;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.24), transparent 70%);
+  animation: floatUp 7.4s ease-in-out infinite;
+}
+
+.layout {
+  width: min(1080px, 96vw);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1.08fr minmax(320px, 430px);
+  align-items: stretch;
+}
+
+.story {
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--card) 88%, #0b1f12), color-mix(in srgb, var(--card) 82%, #111f36));
+  box-shadow: var(--shadow);
+  padding: 30px;
+  display: grid;
+  gap: 16px;
+  animation: popIn 0.5s ease;
+}
+
+.kicker {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.story h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.4vw, 2.7rem);
+  line-height: 1.06;
+}
+
+.story p {
+  margin: 0;
+  color: var(--subtext);
+  max-width: 56ch;
+}
+
+.stats {
+  margin-top: 6px;
+  display: grid;
+  gap: 10px;
+}
+
+.statCard {
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--card) 90%, #091219);
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.statCard strong {
+  font-size: 14px;
+}
+
+.statCard span {
+  color: var(--subtext);
+  font-size: 13px;
+  line-height: 1.38;
 }
 
 .card {
   background: var(--card);
-  border-radius: 20px;
+  border-radius: 24px;
   border: 1px solid var(--border);
   padding: 24px;
-  width: min(420px, 90vw);
   display: grid;
   gap: 16px;
   box-shadow: var(--shadow);
+  animation: popIn 0.6s ease;
 }
 
 .header p {
   color: var(--subtext);
+}
+
+.header h2 {
+  margin: 0;
 }
 
 .form {
@@ -30,8 +135,47 @@
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: color-mix(in srgb, var(--card) 75%, #ffffff 3%);
   color: var(--text);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.form input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.passwordField {
+  position: relative;
+  margin-top: 6px;
+}
+
+.passwordInput {
+  margin-top: 0 !important;
+  padding-right: 92px !important;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), rgba(255, 255, 255, 0.03));
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(10, 16, 24, 0.2);
+}
+
+.passwordToggle:hover {
+  box-shadow: var(--glow);
 }
 
 .form button {
@@ -54,8 +198,45 @@
   color: var(--accent);
 }
 
-.error {
-  color: var(--error);
-  font-size: 12px;
+.adminLink {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 13px;
 }
 
+.adminLink a {
+  color: color-mix(in srgb, var(--text) 86%, #60a5fa);
+}
+
+.error {
+  color: var(--error);
+  font-size: 13px;
+  border: 1px solid color-mix(in srgb, var(--error) 46%, transparent);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #facc15;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #facc15 36%, transparent);
+  background: color-mix(in srgb, #facc15 12%, transparent);
+  padding: 8px 10px;
+}
+
+@media (max-width: 940px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .story {
+    order: 2;
+    padding: 22px;
+  }
+
+  .card {
+    order: 1;
+  }
+}

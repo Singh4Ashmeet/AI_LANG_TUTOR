@@ -1,31 +1,49 @@
 .shell {
   min-height: 100vh;
-  padding-bottom: 76px;
-  background: transparent;
+  padding-bottom: 90px;
+  background:
+    radial-gradient(60% 40% at 8% 0%, rgba(88, 204, 2, 0.08), transparent 70%),
+    radial-gradient(40% 32% at 92% 4%, rgba(59, 130, 246, 0.12), transparent 68%),
+    transparent;
 }
 
 .main {
-  padding: 24px 18px 80px;
-  max-width: 1200px;
+  position: relative;
+  padding: 26px 18px 94px;
+  max-width: 1240px;
   margin: 0 auto;
 }
 
+.main::before {
+  content: "";
+  position: absolute;
+  inset: 0 8px auto;
+  height: 340px;
+  border-radius: 28px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent 72%
+  );
+  opacity: 0.6;
+}
+
 .offline {
-  background: rgba(255, 75, 75, 0.12);
+  background: rgba(255, 75, 75, 0.14);
   color: var(--error);
   text-align: center;
   padding: 8px 12px;
   font-size: 12px;
-  border-bottom: 1px solid rgba(255, 75, 75, 0.2);
+  border-bottom: 1px solid rgba(255, 75, 75, 0.22);
 }
 
 @media (min-width: 960px) {
   .main {
-    padding: 32px 32px 64px;
+    padding: 34px 32px 64px;
   }
 
   .shell {
-    padding-bottom: 32px;
+    padding-bottom: 36px;
   }
 }
-

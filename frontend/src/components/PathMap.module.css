@@ -8,11 +8,12 @@
   left: 50%;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 6px;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, rgba(88, 204, 2, 0.8), rgba(59, 130, 246, 0.3));
+  background: linear-gradient(180deg, rgba(88, 204, 2, 0.9), rgba(59, 130, 246, 0.4));
   border-radius: 999px;
-  opacity: 0.5;
+  opacity: 0.68;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .nodes {
@@ -23,6 +24,37 @@
 .node {
   display: grid;
   justify-items: center;
+}
+
+.sectionNode {
+  justify-items: stretch;
+}
+
+.sectionCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: min(360px, 82vw);
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--card) 88%, #131f16), color-mix(in srgb, var(--card) 84%, #19283f));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.sectionCard span {
+  font-size: 24px;
+}
+
+.sectionCard strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sectionCard p {
+  margin: 0;
+  color: var(--subtext);
+  font-size: 13px;
 }
 
 .align0 {
@@ -42,32 +74,58 @@
   display: grid;
   gap: 6px;
   place-items: center;
-  width: min(200px, 70vw);
+  width: min(220px, 72vw);
   padding: 16px;
   border-radius: 22px;
-  background: var(--card);
+  background: linear-gradient(160deg, var(--card), color-mix(in srgb, var(--card) 80%, #1f2b45));
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   text-align: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.skillSection {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subtext);
 }
 
 .skill:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   box-shadow: var(--glow);
 }
 
 .skillEmoji {
-  font-size: 26px;
+  font-size: 28px;
 }
 
 .skillTitle {
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.skillDescription {
+  color: var(--subtext);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .crown {
   font-size: 12px;
   color: var(--subtext);
+}
+
+.skillAction {
+  margin-top: 2px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
 }
 
 .lock {
@@ -78,13 +136,13 @@
 }
 
 .locked {
-  opacity: 0.45;
-  pointer-events: none;
+  opacity: 0.46;
+  cursor: not-allowed;
 }
 
 .active {
   animation: pulseGlow 2.4s infinite;
-  border-color: rgba(88, 204, 2, 0.7);
+  border-color: rgba(88, 204, 2, 0.8);
 }
 
 .chest {
@@ -93,8 +151,8 @@
 
 .chestShell {
   position: relative;
-  width: 86px;
-  height: 64px;
+  width: 90px;
+  height: 68px;
   animation: floatUp 3s ease-in-out infinite;
 }
 
@@ -104,7 +162,7 @@
   left: 6px;
   right: 6px;
   height: 24px;
-  background: linear-gradient(135deg, rgba(255, 209, 102, 0.9), rgba(255, 183, 77, 0.6));
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.95), rgba(255, 183, 77, 0.65));
   border-radius: 10px;
 }
 
@@ -114,15 +172,134 @@
   left: 0;
   right: 0;
   height: 44px;
-  background: linear-gradient(135deg, rgba(255, 209, 102, 0.8), rgba(255, 138, 101, 0.65));
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.82), rgba(255, 138, 101, 0.7));
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .chestLabel {
   font-size: 12px;
   color: var(--subtext);
   margin-top: 6px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 10, 20, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.previewCard {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--card) 92%, #16261c), color-mix(in srgb, var(--card) 82%, #1a2942));
+  box-shadow: var(--shadow);
+}
+
+.previewEyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.previewHero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.previewEmoji {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  font-size: 34px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+}
+
+.previewHero h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.previewHero p {
+  margin: 0;
+  color: var(--subtext);
+  line-height: 1.5;
+}
+
+.previewStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.previewStats div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.previewStats strong {
+  font-size: 18px;
+}
+
+.previewStats span {
+  font-size: 12px;
+  color: var(--subtext);
+}
+
+.previewNote {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(88, 204, 2, 0.12), rgba(59, 130, 246, 0.12));
+  border: 1px solid rgba(88, 204, 2, 0.18);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.previewActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.previewPrimary,
+.previewSecondary {
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.previewPrimary {
+  border: none;
+  background: var(--accent);
+  color: #0d140f;
+}
+
+.previewSecondary {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
 }
 
 @media (max-width: 720px) {
@@ -137,5 +314,16 @@
   .align2 {
     justify-items: start;
   }
-}
 
+  .previewHero {
+    grid-template-columns: 1fr;
+  }
+
+  .previewStats {
+    grid-template-columns: 1fr;
+  }
+
+  .previewActions {
+    flex-direction: column-reverse;
+  }
+}

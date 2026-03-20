@@ -7,6 +7,11 @@ const LessonComplete = () => {
   const earned = state?.earned ?? 0;
   const accuracy = state?.accuracy_percent ?? 0;
   const hearts = state?.hearts ?? 0;
+  const coachTip = state?.coach_tip ?? "Keep practicing the new phrases in short bursts.";
+  const nextLessonHref =
+    typeof state?.skill_id === "number" || typeof state?.skill_id === "string"
+      ? `/lesson/${state.skill_id}/${Number(state?.lesson_index ?? 0) + 1}`
+      : "/dashboard";
   const [displayXp, setDisplayXp] = useState(0);
 
   useEffect(() => {
@@ -28,7 +33,12 @@ const LessonComplete = () => {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.heading}>Well done!</div>
+        <div className={styles.burst} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className={styles.heading}>Lesson complete</div>
         <div className={styles.xp}>
           +{displayXp} XP
           <span>Total accuracy: {accuracy}%</span>
@@ -41,13 +51,27 @@ const LessonComplete = () => {
           ))}
         </div>
         <div className={styles.hearts}>Hearts remaining: {hearts}</div>
-        <div className={styles.tip}>Coach tip: Keep practicing the new phrases in short bursts.</div>
+        <div className={styles.summaryRow}>
+          <div>
+            <strong>{accuracy}%</strong>
+            <span>Accuracy</span>
+          </div>
+          <div>
+            <strong>{earned}</strong>
+            <span>XP earned</span>
+          </div>
+          <div>
+            <strong>{stars}/3</strong>
+            <span>Stars</span>
+          </div>
+        </div>
+        <div className={styles.tip}>Coach tip: {coachTip}</div>
         <div className={styles.actions}>
           <Link to="/dashboard" className={styles.primary}>
             Back to path
           </Link>
-          <Link to="/dashboard" className={styles.secondary}>
-            Continue
+          <Link to={nextLessonHref} className={styles.secondary}>
+            Continue learning
           </Link>
         </div>
       </div>
@@ -56,4 +80,3 @@ const LessonComplete = () => {
 };
 
 export default LessonComplete;
-

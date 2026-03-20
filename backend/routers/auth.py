@@ -1,29 +1,31 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from uuid import uuid4
+from datetime import datetime, timedelta, timezone
+import uuid
 
 import pyotp
-from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import desc, select
 
 from ..auth import (
     create_access_token,
+    create_refresh_token,
     create_reset_token,
     create_temp_token,
-    decode_reset_token,
-    decode_temp_token,
+    decode_token,
     hash_password,
     verify_password,
 )
-from ..config import settings
-from ..database import otp_codes_collection, users_collection
+from ..database import get_session
 from ..dependencies import get_current_user
-from ..limiters import limiter
-from ..models.user import UserResponse
-from ..services.email import send_otp_email
+from ..models.otp import OTPCode
+from ..models.user import User, UserCreate
+from ..services.crypto import decrypt_value
+from ..services.email import EmailDeliveryError, send_otp_email
 from ..services.otp import (
     allow_otp_request,
     allow_resend,
@@ -34,19 +36,12 @@ from ..services.otp import (
     record_resend,
     verify_otp_code,
 )
+from ..services.seed import seed_admin
 from ..services.sessions import create_session, invalidate_session
-from ..services.crypto import decrypt_value
+from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-bearer_scheme = HTTPBearer(auto_error=False)
-
-
-class RegisterRequest(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-    native_language: str
-    target_language: str
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/credentials")
 
 
 class LoginRequest(BaseModel):
@@ -54,7 +49,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class OtpVerifyRequest(BaseModel):
+class VerifyOTPRequest(BaseModel):
+    code: str
+
+
+class VerifyTOTPRequest(BaseModel):
     code: str
 
 
@@ -62,337 +61,398 @@ class ResetRequest(BaseModel):
     email: EmailStr
 
 
-class ResetVerifyRequest(BaseModel):
-    email: EmailStr
+class VerifyResetRequest(BaseModel):
     code: str
+    email: EmailStr | None = None
 
 
 class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
-def serialize_user(user: dict) -> dict:
-    user = {**user}
-    user.pop("password_hash", None)
-    user.pop("totp_secret", None)
-    user.pop("totp_pending_secret", None)
-    user["_id"] = str(user["_id"])
-    return user
+def serialize_user(user: User) -> dict:
+    data = user.model_dump()
+    data.pop("hashed_password", None)
+    data.pop("totp_secret", None)
+    data.pop("totp_pending_secret", None)
+    data["_id"] = data.get("id")
+    return data
 
 
-def tutor_name_for_language(language: str) -> str:
-    mapping = {
-        "es": "Sofia",
-        "fr": "Lea",
-        "ja": "Yuki",
-        "ko": "Minji",
-        "de": "Lena",
-        "it": "Giulia",
-        "pt": "Camila",
-        "zh": "Mei",
-        "ar": "Noor",
-        "ru": "Anya",
-        "hi": "Aarav",
-    }
-    return mapping.get(language, "Sofia")
+def _otp_email_error_message(exc: EmailDeliveryError) -> str:
+    env = (settings.ENVIRONMENT or "").lower()
+    if env == "development":
+        if exc.reason == "smtp_not_configured":
+            return "OTP email is unavailable. Configure GMAIL_ADDRESS and GMAIL_APP_PASSWORD."
+        if exc.reason == "smtp_auth_failed":
+            return "OTP email login failed. Use a valid Gmail App Password and try again."
+    return "Unable to deliver OTP email right now. Please try again shortly."
 
 
-def build_user_document(payload: RegisterRequest, now: datetime) -> dict:
-    return {
-        "username": payload.username,
-        "email": payload.email.lower(),
-        "password_hash": hash_password(payload.password),
-        "role": "user",
-        "native_language": payload.native_language,
-        "target_language": payload.target_language,
-        "enrolled_languages": [
-            {
-                "target": payload.target_language,
-                "path_position": {"section_index": 0, "skill_index": 0, "lesson_index": 0, "exercise_index": 0},
-                "cefr_level": "A1",
-            }
-        ],
-        "cefr_level": "A1",
-        "goals": [],
-        "tutor_persona": None,
-        "tutor_name": tutor_name_for_language(payload.target_language),
-        "daily_goal_minutes": 10,
-        "xp": 0,
-        "weekly_xp": 0,
-        "total_xp": 0,
-        "streak": 0,
-        "streak_freeze": 0,
-        "streak_freeze_last_used": None,
-        "last_session_date": None,
-        "hearts": settings.max_hearts,
-        "hearts_last_refill": now,
-        "gems": 0,
-        "path_position": {"section_index": 0, "skill_index": 0, "lesson_index": 0, "exercise_index": 0},
-        "crown_levels": {},
-        "onboarding_complete": False,
-        "is_active": True,
-        "totp_secret": None,
-        "otp_enabled": True,
-        "notification_time": "19:00",
-        "sounds_enabled": True,
-        "theme": "dark",
-        "immersion_mode": False,
-        "avatar_color": "#58CC02",
-        "friends": [],
-        "global_rank": None,
-        "achievements_earned": [],
-        "total_lessons_complete": 0,
-        "total_words_learned": 0,
-        "total_minutes_practiced": 0,
-        "created_at": now,
-        "updated_at": now,
-    }
+def _dev_otp_fallback_enabled() -> bool:
+    return (settings.ENVIRONMENT or "").lower() == "development" and bool(settings.ENABLE_DEV_OTP_FALLBACK)
 
 
-async def _extract_temp_token(credentials: HTTPAuthorizationCredentials | None) -> dict:
-    if not credentials:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+async def _create_login_otp(
+    session: AsyncSession,
+    email: str,
+    username: str,
+    purpose: str = "login",
+) -> str:
+    await session.execute(delete(OTPCode).where(OTPCode.email == email, OTPCode.purpose == purpose))
+    code = generate_otp_code()
+    now = datetime.utcnow()
+    session.add(
+        OTPCode(
+            email=email,
+            code_hash=hash_otp_code(code),
+            purpose=purpose,
+            attempts=0,
+            used=False,
+            created_at=now,
+            expires_at=now + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+        )
+    )
+    await session.commit()
     try:
-        return decode_temp_token(credentials.credentials)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        await send_otp_email(email, username, code)
+        return "email"
+    except EmailDeliveryError:
+        if _dev_otp_fallback_enabled():
+            otp_doc = (
+                await session.execute(
+                    select(OTPCode)
+                    .where(OTPCode.email == email, OTPCode.purpose == purpose, OTPCode.used == False)
+                    .order_by(desc(OTPCode.created_at))
+                )
+            ).scalars().first()
+            if otp_doc:
+                otp_doc.code_hash = hash_otp_code(settings.DEV_OTP_BYPASS_CODE)
+                otp_doc.attempts = 0
+                otp_doc.used = False
+                session.add(otp_doc)
+                await session.commit()
+            return "development_bypass"
+
+        await session.execute(delete(OTPCode).where(OTPCode.email == email, OTPCode.purpose == purpose))
+        await session.commit()
+        raise
+
+
+async def _find_active_otp(session: AsyncSession, email: str, purpose: str) -> OTPCode | None:
+    stmt = (
+        select(OTPCode)
+        .where(OTPCode.email == email, OTPCode.purpose == purpose, OTPCode.used == False)
+        .order_by(desc(OTPCode.created_at))
+    )
+    return (await session.execute(stmt)).scalars().first()
 
 
 @router.post("/register")
-async def register(payload: RegisterRequest):
-    users = users_collection()
-    if await users.find_one({"$or": [{"email": payload.email.lower()}, {"username": payload.username}]}):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username or email already exists")
+async def register(payload: UserCreate, session: AsyncSession = Depends(get_session)):
+    await seed_admin(session)
+    email = payload.email.lower()
+    existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    now = datetime.now(timezone.utc)
-    try:
-        doc = build_user_document(payload, now)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    result = await users.insert_one(doc)
-    token, jti = create_access_token({"user_id": str(result.inserted_id), "email": payload.email.lower(), "role": "user"})
-    await create_session(result.inserted_id, jti, None, None)
-    user = await users.find_one({"_id": result.inserted_id})
-    return {"access_token": token, "user": serialize_user(user), "role": "user"}
+    name_taken = (await session.execute(select(User).where(User.username == payload.username))).scalar_one_or_none()
+    if name_taken:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already in use")
+
+    now = datetime.utcnow()
+    user = User(
+        username=payload.username,
+        email=email,
+        hashed_password=hash_password(payload.password),
+        native_language=payload.native_language or "english",
+        target_language=payload.target_language or "spanish",
+        role="user",
+        onboarding_complete=False,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return {"message": "Account created successfully"}
 
 
 @router.post("/login/credentials")
-@limiter.limit("3/hour")
-async def login_credentials(request: Request, payload: LoginRequest, background_tasks: BackgroundTasks):
+async def login_credentials(
+    request: Request,
+    payload: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+):
     email = payload.email.lower()
-    if not allow_otp_request(email):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many OTP requests. Try again later.")
-    record_otp_request(email)
-
-    users = users_collection()
-    user = await users.find_one({"email": email})
-    if not user or not verify_password(payload.password, user.get("password_hash", "")):
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-    if not user.get("is_active", True):
+    if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact support.")
 
-    await otp_codes_collection().delete_many({"email": email, "purpose": "login"})
-    code = generate_otp_code()
-    code_hash = hash_otp_code(code)
-    await otp_codes_collection().insert_one(
-        {
-            "email": email,
-            "code": code_hash,
-            "purpose": "login",
-            "attempts": 0,
-            "created_at": datetime.now(timezone.utc),
-            "used": False,
-        }
-    )
-    background_tasks.add_task(send_otp_email, email, user.get("username", "there"), code)
-    temp_token = create_temp_token({"email": email, "purpose": "login", "token_id": str(uuid4())})
-    return {"message": "OTP sent to your email", "otp_required": True, "temp_token": temp_token}
+    if not allow_otp_request(email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many OTP requests. Try again later.",
+        )
+    try:
+        delivery_mode = await _create_login_otp(session, email, user.username, purpose="login")
+    except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_otp_email_error_message(exc),
+        ) from exc
+    record_otp_request(email)
+
+    temp_id = str(uuid.uuid4())
+    temp_token = create_temp_token({"email": email, "scope": "login", "tid": temp_id})
+    message = "OTP sent to your email" if delivery_mode == "email" else "Development OTP is ready"
+    return {
+        "message": message,
+        "otp_required": True,
+        "temp_token": temp_token,
+        "delivery_mode": delivery_mode,
+    }
+
+
+@router.post("/login")
+async def login_alias(
+    request: Request,
+    payload: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    return await login_credentials(request, payload, session)
 
 
 @router.post("/login/verify-otp")
 async def verify_login_otp(
-    payload: OtpVerifyRequest,
     request: Request,
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    payload: VerifyOTPRequest,
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
 ):
-    token_payload = await _extract_temp_token(credentials)
-    email = token_payload.get("email")
-    if token_payload.get("purpose") != "login" or not email:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    temp_payload = decode_token(token)
+    if not temp_payload or temp_payload.get("type") != "temp" or temp_payload.get("scope") != "login":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid temporary token")
 
-    otp_doc = await otp_codes_collection().find_one({"email": email, "purpose": "login", "used": False})
+    email = str(temp_payload.get("email", "")).lower()
+    if not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid temporary token payload")
+
+    otp_doc = await _find_active_otp(session, email, "login")
     if not otp_doc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP not found. Request a new code.")
-    if otp_expired(otp_doc["created_at"]):
-        await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
+    if otp_expired(otp_doc.created_at) or otp_doc.expires_at < datetime.utcnow():
+        await session.execute(delete(OTPCode).where(OTPCode.id == otp_doc.id))
+        await session.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code expired. Request a new code.")
 
-    attempts = int(otp_doc.get("attempts", 0)) + 1
-    if attempts > settings.max_otp_attempts:
-        await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts. Request a new code.")
+    otp_doc.attempts += 1
+    if otp_doc.attempts > settings.MAX_OTP_ATTEMPTS:
+        await session.execute(delete(OTPCode).where(OTPCode.id == otp_doc.id))
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Request a new code.",
+        )
 
-    if not verify_otp_code(payload.code, otp_doc["code"]):
-        await otp_codes_collection().update_one({"_id": otp_doc["_id"]}, {"$set": {"attempts": attempts}})
-        remaining = max(settings.max_otp_attempts - attempts, 0)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Incorrect code. {remaining} attempts remaining.")
+    if not verify_otp_code(payload.code, otp_doc.code_hash):
+        session.add(otp_doc)
+        await session.commit()
+        remaining = max(settings.MAX_OTP_ATTEMPTS - otp_doc.attempts, 0)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Incorrect code. {remaining} attempts remaining.",
+        )
 
-    await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
-    user = await users_collection().find_one({"email": email})
+    otp_doc.used = True
+    session.add(otp_doc)
+    await session.commit()
+
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    if user.get("role") == "admin" and user.get("totp_secret"):
-        totp_token = create_temp_token({"user_id": str(user["_id"]), "purpose": "totp"})
-        return {"totp_required": True, "temp_token": totp_token, "role": "admin"}
+    if user.role == "admin" and user.otp_enabled and user.totp_secret:
+        temp_token = create_temp_token({"sub": str(user.id), "scope": "totp", "tid": str(uuid.uuid4())})
+        return {"totp_required": True, "temp_token": temp_token}
 
-    access_token, jti = create_access_token({"user_id": str(user["_id"]), "email": email, "role": user.get("role")})
-    await create_session(user["_id"], jti, request.headers.get("User-Agent"), request.client.host if request.client else None)
-    return {"access_token": access_token, "user": serialize_user(user), "role": user.get("role")}
+    jti = str(uuid.uuid4())
+    await create_session(
+        session,
+        user.id,
+        jti,
+        request.headers.get("User-Agent"),
+        request.client.host if request.client else None,
+    )
+    access_token = create_access_token({"sub": str(user.id), "jti": jti})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return {"access_token": access_token, "refresh_token": refresh_token, "user": serialize_user(user), "role": user.role}
 
 
 @router.post("/login/resend-otp")
 async def resend_login_otp(
-    background_tasks: BackgroundTasks,
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
 ):
-    token_payload = await _extract_temp_token(credentials)
-    email = token_payload.get("email")
-    token_id = token_payload.get("token_id")
-    if token_payload.get("purpose") != "login" or not email or not token_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    if not allow_resend(token_id):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many resends. Please wait.")
-    record_resend(token_id)
+    temp_payload = decode_token(token)
+    if not temp_payload or temp_payload.get("type") != "temp":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid temporary token")
 
-    await otp_codes_collection().delete_many({"email": email, "purpose": "login"})
-    code = generate_otp_code()
-    await otp_codes_collection().insert_one(
-        {
-            "email": email,
-            "code": hash_otp_code(code),
-            "purpose": "login",
-            "attempts": 0,
-            "created_at": datetime.now(timezone.utc),
-            "used": False,
-        }
-    )
-    user = await users_collection().find_one({"email": email})
-    background_tasks.add_task(send_otp_email, email, user.get("username", "there"), code)
-    return {"message": "OTP sent to your email"}
+    tid = temp_payload.get("tid") or token
+    if not allow_resend(str(tid)):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Resend limit reached")
+
+    email = str(temp_payload.get("email", "")).lower()
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    try:
+        delivery_mode = await _create_login_otp(session, email, user.username, purpose="login")
+    except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_otp_email_error_message(exc),
+        ) from exc
+    record_resend(str(tid))
+    message = "OTP resent" if delivery_mode == "email" else "Development OTP refreshed"
+    return {"message": message, "delivery_mode": delivery_mode}
 
 
 @router.post("/login/verify-totp")
 async def verify_totp(
-    payload: OtpVerifyRequest,
     request: Request,
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    payload: VerifyTOTPRequest,
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
 ):
-    token_payload = await _extract_temp_token(credentials)
-    if token_payload.get("purpose") != "totp":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user_id = token_payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    temp_payload = decode_token(token)
+    if not temp_payload or temp_payload.get("type") != "temp" or temp_payload.get("scope") != "totp":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid temporary token")
 
-    user = await users_collection().find_one({"_id": ObjectId(user_id)})
-    if not user or user.get("role") != "admin":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    secret = user.get("totp_secret")
-    if not secret:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="TOTP not enabled")
+    user_id = int(temp_payload.get("sub", "0"))
+    user = (await session.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user or not user.totp_secret:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="TOTP is not configured")
 
-    totp = pyotp.TOTP(decrypt_value(secret))
-    if not totp.verify(payload.code, valid_window=1):
+    secret = decrypt_value(user.totp_secret)
+    if not pyotp.TOTP(secret).verify(payload.code, valid_window=1):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authenticator code")
 
-    access_token, jti = create_access_token({"user_id": str(user["_id"]), "email": user.get("email"), "role": "admin"})
-    await create_session(user["_id"], jti, request.headers.get("User-Agent"), request.client.host if request.client else None)
-    return {"access_token": access_token, "user": serialize_user(user), "role": "admin"}
+    jti = str(uuid.uuid4())
+    await create_session(
+        session,
+        user.id,
+        jti,
+        request.headers.get("User-Agent"),
+        request.client.host if request.client else None,
+    )
+    access_token = create_access_token({"sub": str(user.id), "jti": jti})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return {"access_token": access_token, "refresh_token": refresh_token, "user": serialize_user(user), "role": user.role}
 
 
 @router.post("/password/request-reset")
-@limiter.limit("3/hour")
-async def request_password_reset(request: Request, payload: ResetRequest, background_tasks: BackgroundTasks):
+async def request_password_reset(
+    payload: ResetRequest,
+    session: AsyncSession = Depends(get_session),
+):
     email = payload.email.lower()
-    if not allow_otp_request(email):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many OTP requests. Try again later.")
-    record_otp_request(email)
-
-    user = await users_collection().find_one({"email": email})
-    if user:
-        await otp_codes_collection().delete_many({"email": email, "purpose": "reset_password"})
-        code = generate_otp_code()
-        await otp_codes_collection().insert_one(
-            {
-                "email": email,
-                "code": hash_otp_code(code),
-                "purpose": "reset_password",
-                "attempts": 0,
-                "created_at": datetime.now(timezone.utc),
-                "used": False,
-            }
-        )
-        background_tasks.add_task(send_otp_email, email, user.get("username", "there"), code)
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user and allow_otp_request(email):
+        try:
+            await _create_login_otp(session, email, user.username, purpose="reset_password")
+            record_otp_request(email)
+        except EmailDeliveryError:
+            pass
     return {"message": "If the account exists, an OTP has been sent."}
 
 
 @router.post("/password/verify-reset")
-async def verify_reset(payload: ResetVerifyRequest):
-    email = payload.email.lower()
-    otp_doc = await otp_codes_collection().find_one({"email": email, "purpose": "reset_password", "used": False})
-    if not otp_doc:
+async def verify_reset_otp(payload: VerifyResetRequest, session: AsyncSession = Depends(get_session)):
+    otp_doc: OTPCode | None = None
+    email = payload.email.lower() if payload.email else None
+
+    if email:
+        otp_doc = await _find_active_otp(session, email, "reset_password")
+    else:
+        candidates = (
+            await session.execute(
+                select(OTPCode)
+                .where(OTPCode.purpose == "reset_password", OTPCode.used == False)
+                .order_by(desc(OTPCode.created_at))
+                .limit(50)
+            )
+        ).scalars().all()
+        for candidate in candidates:
+            if verify_otp_code(payload.code, candidate.code_hash):
+                otp_doc = candidate
+                email = candidate.email
+                break
+
+    if not otp_doc or not email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP not found. Request a new code.")
-    if otp_expired(otp_doc["created_at"]):
-        await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
+
+    if otp_expired(otp_doc.created_at) or otp_doc.expires_at < datetime.utcnow():
+        await session.execute(delete(OTPCode).where(OTPCode.id == otp_doc.id))
+        await session.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code expired. Request a new code.")
 
-    attempts = int(otp_doc.get("attempts", 0)) + 1
-    if attempts > settings.max_otp_attempts:
-        await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts. Request a new code.")
+    otp_doc.attempts += 1
+    if otp_doc.attempts > settings.MAX_OTP_ATTEMPTS:
+        await session.execute(delete(OTPCode).where(OTPCode.id == otp_doc.id))
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Request a new code.",
+        )
 
-    if not verify_otp_code(payload.code, otp_doc["code"]):
-        await otp_codes_collection().update_one({"_id": otp_doc["_id"]}, {"$set": {"attempts": attempts}})
-        remaining = max(settings.max_otp_attempts - attempts, 0)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Incorrect code. {remaining} attempts remaining.")
+    if not verify_otp_code(payload.code, otp_doc.code_hash):
+        session.add(otp_doc)
+        await session.commit()
+        remaining = max(settings.MAX_OTP_ATTEMPTS - otp_doc.attempts, 0)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Incorrect code. {remaining} attempts remaining.",
+        )
 
-    await otp_codes_collection().delete_one({"_id": otp_doc["_id"]})
-    reset_token = create_reset_token({"email": email})
-    return {"reset_token": reset_token}
+    otp_doc.used = True
+    session.add(otp_doc)
+    await session.commit()
+    return {"reset_token": create_reset_token({"email": email})}
 
 
 @router.post("/password/reset")
-async def reset_password(payload: ResetPasswordRequest, request: Request):
-    token = request.headers.get("reset_token") or request.headers.get("Reset-Token")
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing reset token")
-    try:
-        token_payload = decode_reset_token(token)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid reset token")
-    email = token_payload.get("email")
-    if not email:
+async def reset_password(
+    payload: ResetPasswordRequest,
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+):
+    reset_payload = decode_token(token)
+    if not reset_payload or reset_payload.get("type") != "reset":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid reset token")
 
-    user = await users_collection().find_one({"email": email})
+    email = str(reset_payload.get("email", "")).lower()
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    await users_collection().update_one(
-        {"_id": user["_id"]},
-        {"$set": {"password_hash": hash_password(payload.new_password), "updated_at": datetime.now(timezone.utc)}},
-    )
-    await invalidate_session(user["_id"])
-    return {"success": True}
+    user.hashed_password = hash_password(payload.new_password)
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    await session.commit()
+    await invalidate_session(session, user.id)
+    return {"message": "Password updated successfully"}
 
 
-@router.get("/me", response_model=UserResponse)
-async def me(user=Depends(get_current_user)):
+@router.get("/me")
+async def auth_me(user: User = Depends(get_current_user)):
     return serialize_user(user)
 
 
 @router.post("/logout")
-async def logout(user=Depends(get_current_user)):
-    await invalidate_session(user["_id"])
-    return {"success": True}
+async def logout(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    await invalidate_session(session, user.id)
+    return {"status": "success"}

@@ -9,7 +9,7 @@ from ..config import settings
 
 
 def _fernet() -> Fernet:
-    digest = hashlib.sha256(settings.secret_key.encode("utf-8")).digest()
+    digest = hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).digest()
     key = base64.urlsafe_b64encode(digest)
     return Fernet(key)
 

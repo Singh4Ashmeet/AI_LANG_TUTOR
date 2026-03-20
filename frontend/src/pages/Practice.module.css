@@ -1,36 +1,198 @@
 .page {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+  animation: slideUp 0.45s ease;
 }
 
 .header p {
   color: var(--subtext);
+  max-width: 62ch;
+}
+
+.eyebrow,
+.cardTag {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 12px;
   color: var(--accent);
 }
 
-.grid {
+.summaryRow,
+.featuredGrid,
+.grid,
+.personalizedGrid {
   display: grid;
   gap: 12px;
+}
+
+.summaryRow {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.summaryCard {
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 88%, #0f1720), color-mix(in srgb, var(--card) 82%, #1f2d42));
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.summaryCard span,
+.cardTag {
+  color: var(--subtext);
+}
+
+.summaryCard strong {
+  font-size: 28px;
+}
+
+.summaryCard p {
+  margin: 0;
+  color: var(--subtext);
+  font-size: 13px;
+}
+
+.featuredGrid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.personalizedPanel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--card) 86%, #14221a), color-mix(in srgb, var(--card) 84%, #1a2b44));
+  box-shadow: var(--shadow);
+}
+
+.personalizedHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.personalizedHeader h3 {
+  margin: 4px 0 0;
+}
+
+.personalizedLink {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0d140f;
+  font-weight: 800;
+}
+
+.personalizedGrid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.personalizedCard {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.personalizedCard > span {
+  color: var(--subtext);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.personalizedCard p {
+  margin: 0;
+  color: var(--subtext);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.personalizedItem {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.personalizedItem strong {
+  font-size: 14px;
+}
+
+.personalizedItem small {
+  color: var(--subtext);
+  line-height: 1.4;
+}
+
+.featuredCard,
+.card {
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.featuredCard:hover,
+.card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  box-shadow: var(--glow);
+}
+
+.featuredCard h3,
+.card h3 {
+  margin: 0;
+}
+
+.featuredCard p,
+.card p {
+  margin: 0;
+  color: var(--subtext);
+}
+
+.featuredCard span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.green {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 82%, #173d23), color-mix(in srgb, var(--card) 90%, #0d141d));
+}
+
+.blue {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 82%, #1a3550), color-mix(in srgb, var(--card) 90%, #0d141d));
+}
+
+.gold {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 82%, #4c3614), color-mix(in srgb, var(--card) 90%, #0d141d));
+}
+
+.grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .card {
-  background: var(--card);
-  border-radius: 18px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  display: grid;
-  gap: 8px;
-  box-shadow: var(--shadow);
+  background: linear-gradient(160deg, var(--card), color-mix(in srgb, var(--card) 82%, #22314f));
 }
 
-.card p {
-  color: var(--subtext);
+@media (max-width: 720px) {
+  .personalizedHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
-

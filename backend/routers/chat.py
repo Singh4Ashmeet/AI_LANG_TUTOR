@@ -1,235 +1,242 @@
 from __future__ import annotations
-
 import json
 from datetime import datetime, timezone
-
-from bson import ObjectId
+from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, status
 from pydantic import BaseModel
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
-from ..database import admin_logs_collection, grammar_stats_collection, sessions_collection, users_collection, vocabulary_collection
+from ..database import get_session
 from ..dependencies import get_current_user
+from ..models.user import User
+from ..models.session import Session
+from ..models.extra import GrammarStat
+from ..models.vocabulary import VocabularyItem
 from ..services.learner import award_xp, update_streak
-from ..services.agents import call_conversation_tutor, call_error_analyst, call_feedback_coach, call_summary_agent
+from ..services.agents import call_conversation_tutor, call_error_analyst, call_summary_agent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-
 class NewChatResponse(BaseModel):
-    session_id: str
-
+    session_id: int
 
 class ChatRequest(BaseModel):
-    session_id: str
+    session_id: int
     message: str
     message_type: str = "text"
 
+# Helper functions for background tasks need their own session management 
+# or must be awaited within the request scope if using the dependency session.
+# Since we want to await them in the request to ensure data consistency for now:
 
-async def _log_admin_event(event_type: str, message: str, user_id: ObjectId | None = None):
-    await admin_logs_collection().insert_one(
-        {
-            "event_type": event_type,
-            "message": message,
-            "metadata": {},
-            "admin_id": None,
-            "user_id": user_id,
-            "created_at": datetime.now(timezone.utc),
-        }
-    )
-
-
-@router.post("/new", response_model=NewChatResponse)
-async def new_chat(user=Depends(get_current_user)):
-    now = datetime.now(timezone.utc)
-    result = await sessions_collection().insert_one(
-        {
-            "user_id": user["_id"],
-            "session_type": "tutor_chat",
-            "scenario": None,
-            "messages": [],
-            "xp_earned": 0,
-            "duration_seconds": 0,
-            "grammar_errors_count": 0,
-            "vocabulary_added_count": 0,
-            "started_at": now,
-            "ended_at": None,
-        }
-    )
-    return {"session_id": str(result.inserted_id)}
-
-
-async def _record_errors(user: dict, errors: list[dict]) -> None:
+async def _record_errors(session: AsyncSession, user: User, errors: list[dict]) -> None:
     if not errors:
         return
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     for error in errors:
         rule = error.get("rule") or "unknown"
-        await grammar_stats_collection().update_one(
-            {"user_id": user["_id"], "rule": rule, "language": user.get("target_language")},
-            {
-                "$inc": {"errors": 1, "attempts": 1},
-                "$set": {"last_error_at": now},
-            },
-            upsert=True,
+        stmt = select(GrammarStat).where(
+            GrammarStat.user_id == user.id,
+            GrammarStat.rule == rule,
+            GrammarStat.language == (user.target_language or "es")
         )
+        result = await session.execute(stmt)
+        stat = result.scalar_one_or_none()
+        
+        if stat:
+            stat.errors += 1
+            stat.attempts += 1
+            stat.last_error_at = now
+            session.add(stat)
+        else:
+            new_stat = GrammarStat(
+                user_id=user.id,
+                rule=rule,
+                language=(user.target_language or "es"),
+                errors=1,
+                attempts=1,
+                last_error_at=now
+            )
+            session.add(new_stat)
 
-
-async def _record_vocabulary(user: dict, words: list[str], context_sentence: str) -> None:
+async def _record_vocabulary(session: AsyncSession, user: User, words: list[str], context_sentence: str) -> None:
     if not words:
         return
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     for word in words:
-        existing = await vocabulary_collection().find_one(
-            {"user_id": user["_id"], "word": word, "language": user.get("target_language")}
+        stmt = select(VocabularyItem).where(
+            VocabularyItem.user_id == user.id,
+            VocabularyItem.word == word,
+            VocabularyItem.language == (user.target_language or "es")
         )
+        result = await session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
         if existing:
-            await vocabulary_collection().update_one(
-                {"_id": existing["_id"]},
-                {"$inc": {"times_seen": 1}, "$set": {"last_seen": now}},
+            existing.times_seen = (existing.times_seen or 0) + 1
+            existing.last_seen = now
+            session.add(existing)
+        else:
+            new_vocab = VocabularyItem(
+                user_id=user.id,
+                word=word,
+                translation="",
+                language=(user.target_language or "es"),
+                status="new",
+                ease_factor=2.5,
+                interval_days=1,
+                repetitions=0,
+                next_review=now,
+                last_seen=now,
+                times_seen=1,
+                times_correct=0,
+                context_sentence=context_sentence,
+                created_at=now,
             )
-            continue
-        await vocabulary_collection().insert_one(
-            {
-                "user_id": user["_id"],
-                "word": word,
-                "translation": "",
-                "language": user.get("target_language"),
-                "status": "new",
-                "ease_factor": 2.5,
-                "interval_days": 1,
-                "repetitions": 0,
-                "next_review": now,
-                "last_seen": now,
-                "times_seen": 1,
-                "times_correct": 0,
-                "context_sentence": context_sentence,
-                "source_session_id": None,
-                "source_skill": None,
-                "created_at": now,
-            }
-        )
+            session.add(new_vocab)
 
+@router.post("/new", response_model=NewChatResponse)
+async def new_chat(
+    user: User = Depends(get_current_user), 
+    session_db: AsyncSession = Depends(get_session)
+):
+    now = datetime.utcnow()
+    # Default opening message
+    opening = "Hola! Soy Sofia. De que quieres hablar hoy?"
+    
+    new_session = Session(
+        user_id=user.id,
+        session_type="tutor_chat",
+        messages=[{
+            "role": "assistant", 
+            "content": opening, 
+            "timestamp": now.isoformat()
+        }],
+        xp_earned=0,
+        started_at=now,
+    )
+    session_db.add(new_session)
+    await session_db.commit()
+    await session_db.refresh(new_session)
+    return {"session_id": new_session.id}
 
 @router.post("")
-async def chat(payload: ChatRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
-    session = await sessions_collection().find_one({"_id": ObjectId(payload.session_id)})
-    if not session:
+async def chat(
+    payload: ChatRequest, 
+    user: User = Depends(get_current_user),
+    session_db: AsyncSession = Depends(get_session)
+):
+    stmt = select(Session).where(Session.id == payload.session_id, Session.user_id == user.id)
+    result = await session_db.execute(stmt)
+    chat_session = result.scalar_one_or_none()
+    
+    if not chat_session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    # Get previous context
-    history = session.get("messages", [])[-10:] # Get last 10 messages
-    messages = [{"role": item["role"], "content": item["content"]} for item in history]
-    messages.append({"role": "user", "content": payload.message})
-
     # Analyze user message
-    analysis = await call_error_analyst([{"role": "user", "content": payload.message}], user)
+    user_dict = user.model_dump()
+    try:
+        analysis = await call_error_analyst([{"role": "user", "content": payload.message}], user_dict)
+    except Exception:
+        analysis = {"errors": [], "new_vocabulary": []}
+        
     errors = analysis.get("errors", [])
     new_vocab = analysis.get("new_vocabulary", [])
+
+    # Record stats (awaiting here to keep session open)
+    await _record_errors(session_db, user, errors)
+    await _record_vocabulary(session_db, user, new_vocab, payload.message)
 
     user_message = {
         "role": "user",
         "content": payload.message,
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.utcnow().isoformat(),
         "errors": errors,
         "new_vocabulary": new_vocab,
     }
+    
+    # Append to messages
+    chat_session.messages.append(user_message)
+    flag_modified(chat_session, "messages")
+    session_db.add(chat_session)
+    await session_db.commit() # Commit user msg first
+
+    # Prepare context for AI
+    history = chat_session.messages[-10:] if chat_session.messages else []
+    ai_messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
     # Generate reply
-    reply = await call_conversation_tutor(messages, user)
+    reply = await call_conversation_tutor(ai_messages, user_dict)
 
     assistant_message = {
         "role": "assistant",
         "content": reply,
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
-    # Atomic update to push both messages
-    await sessions_collection().update_one(
-        {"_id": session["_id"]},
-        {"$push": {"messages": {"$each": [user_message, assistant_message]}}},
-    )
-
-    # Background tasks
-    if errors:
-        await _record_errors(user, errors)
-    if new_vocab:
-        await _record_vocabulary(user, new_vocab, payload.message)
+    chat_session.messages.append(assistant_message)
+    flag_modified(chat_session, "messages")
+    session_db.add(chat_session)
+    await session_db.commit()
 
     return {
         "reply": reply,
         "corrections": errors,
         "new_words": new_vocab,
-        "xp": {"earned": 0, "total": user.get("xp", 0), "streak": user.get("streak", 0), "leveled_up": False},
     }
 
-
 @router.post("/end/{session_id}")
-async def end_session(session_id: str, user=Depends(get_current_user)):
-    session = await sessions_collection().find_one({"_id": ObjectId(session_id)})
-    if not session:
+async def end_session(
+    session_id: int, 
+    user: User = Depends(get_current_user),
+    session_db: AsyncSession = Depends(get_session)
+):
+    stmt = select(Session).where(Session.id == session_id, Session.user_id == user.id)
+    result = await session_db.execute(stmt)
+    chat_session = result.scalar_one_or_none()
+    
+    if not chat_session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    end_time = datetime.now(timezone.utc)
-    # Handle legacy sessions that might not have started_at
-    start_time = session.get("started_at") or end_time
-    duration = int((end_time - start_time).total_seconds())
+    end_time = datetime.utcnow()
+    duration = int((end_time - chat_session.started_at).total_seconds())
 
     # Generate Summary
-    messages = session.get("messages", [])
-    conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+    messages = chat_session.messages or []
+    # Simplified summary prompt
+    conversation_text = "\n".join([f"{m.get('role')}: {m.get('content')}" for m in messages])
+    summary_prompt = [{"role": "user", "content": f"Summarize:\n{conversation_text}"}]
     
-    summary_prompt = [
-        {"role": "user", "content": f"Summarize this conversation and provide feedback:\n{conversation_text}"}
-    ]
+    user_dict = user.model_dump()
+    summary_data = await call_summary_agent(summary_prompt, user_dict)
     
-    summary_data = await call_summary_agent(summary_prompt, user)
+    # Update stats
+    update_streak(user) # Updates user object in place
+    earned, leveled_up, new_level = award_xp(user, base=50)
     
-    # Fallback if AI fails to return dict
-    if not isinstance(summary_data, dict):
-        summary_data = {
-            "summary": "Great conversation practice!",
-            "key_vocabulary_used": [],
-            "grammar_tips": ["Keep practicing!"]
-        }
-
-    updated_user = await users_collection().find_one({"_id": user["_id"]})
-    updated_user = update_streak(updated_user)
-    earned, leveled_up, new_level = award_xp(updated_user, base=50)
-    updated_user["updated_at"] = end_time
-
-    # Pop _id before update
-    updated_user.pop("_id", None)
-    await users_collection().update_one({"_id": user["_id"]}, {"$set": updated_user})
+    chat_session.ended_at = end_time
+    chat_session.duration_seconds = duration
+    chat_session.xp_earned = earned
+    chat_session.summary = summary_data
     
-    await sessions_collection().update_one(
-        {"_id": session["_id"]}, 
-        {
-            "$set": {
-                "ended_at": end_time, 
-                "duration_seconds": duration,
-                "xp_earned": earned,
-                "summary": summary_data
-            }
-        }
-    )
+    session_db.add(user)
+    session_db.add(chat_session)
+    await session_db.commit()
 
     return {
         "earned": earned,
-        "total": updated_user.get("xp", 0),
-        "streak": updated_user.get("streak", 0),
+        "total": user.xp,
+        "streak": user.streak,
         "leveled_up": leveled_up,
         "cefr_level": new_level,
         "summary": summary_data,
     }
-
 
 @router.websocket("/stream")
 async def chat_stream(websocket: WebSocket):
     await websocket.accept()
     while True:
         message = await websocket.receive_text()
-        try:
-            reply = message
-        except Exception:
-            reply = "AI service temporarily unavailable"
-        await websocket.send_text(reply)
+        await websocket.send_text("Streaming not implemented yet")

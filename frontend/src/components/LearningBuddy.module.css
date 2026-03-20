@@ -1,0 +1,411 @@
+.wrapper {
+  display: grid;
+  gap: 10px;
+}
+
+.left {
+  justify-items: start;
+}
+
+.right {
+  justify-items: end;
+}
+
+.center {
+  justify-items: center;
+}
+
+.bubble {
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.bubble.left::after,
+.bubble.right::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  width: 18px;
+  height: 18px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  transform: rotate(45deg);
+}
+
+.bubble.left::after {
+  left: 28px;
+}
+
+.bubble.right::after {
+  right: 28px;
+}
+
+.bubble p {
+  margin: 4px 0 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.name {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stage {
+  position: relative;
+  width: 180px;
+  height: 178px;
+  display: grid;
+  place-items: end center;
+}
+
+.sm .stage {
+  width: 136px;
+  height: 136px;
+}
+
+.lg .stage {
+  width: 220px;
+  height: 210px;
+}
+
+.shadow {
+  position: absolute;
+  bottom: 10px;
+  width: 100px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  filter: blur(8px);
+}
+
+.character {
+  position: relative;
+  width: 120px;
+  height: 148px;
+  animation: buddyFloat 3.6s ease-in-out infinite;
+}
+
+.sm .character {
+  width: 96px;
+  height: 120px;
+}
+
+.lg .character {
+  width: 150px;
+  height: 180px;
+}
+
+.head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 86px;
+  height: 82px;
+  transform: translateX(-50%);
+  border-radius: 34px 34px 30px 30px;
+  background: var(--buddy-main);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+}
+
+.sm .head {
+  width: 68px;
+  height: 66px;
+}
+
+.lg .head {
+  width: 106px;
+  height: 102px;
+}
+
+.ear {
+  position: absolute;
+  top: -12px;
+  width: 24px;
+  height: 28px;
+  background: var(--buddy-main);
+  border-radius: 18px 18px 8px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.earLeft {
+  left: 10px;
+  transform: rotate(-12deg);
+}
+
+.earRight {
+  right: 10px;
+  transform: rotate(12deg);
+}
+
+.sprout .ear {
+  border-radius: 20px 20px 4px 14px;
+}
+
+.comet .ear {
+  border-radius: 6px 18px 6px 18px;
+}
+
+.miso .ear {
+  height: 18px;
+  border-radius: 999px;
+  top: -6px;
+}
+
+.face {
+  position: absolute;
+  inset: 28px 18px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.eye {
+  width: 11px;
+  height: 15px;
+  border-radius: 999px;
+  background: #101827;
+  position: relative;
+}
+
+.eye::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mouth {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  width: 18px;
+  height: 10px;
+  border-bottom: 3px solid #101827;
+  border-radius: 0 0 999px 999px;
+  transform: translateX(-50%);
+}
+
+.focus .mouth {
+  width: 12px;
+  height: 0;
+  border-bottom-width: 2px;
+}
+
+.celebrate .mouth {
+  width: 20px;
+  height: 12px;
+}
+
+.cheekLeft,
+.cheekRight {
+  position: absolute;
+  bottom: 18px;
+  width: 10px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 126, 148, 0.34);
+}
+
+.cheekLeft {
+  left: 12px;
+}
+
+.cheekRight {
+  right: 12px;
+}
+
+.body {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  width: 92px;
+  height: 80px;
+  transform: translateX(-50%);
+  border-radius: 28px 28px 26px 26px;
+  background: linear-gradient(180deg, var(--buddy-main), var(--buddy-dark));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.sm .body {
+  width: 72px;
+  height: 60px;
+}
+
+.lg .body {
+  width: 118px;
+  height: 98px;
+}
+
+.belly {
+  position: absolute;
+  inset: 18px 18px 10px;
+  border-radius: 999px 999px 20px 20px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.arm,
+.foot {
+  position: absolute;
+  background: var(--buddy-dark);
+}
+
+.arm {
+  top: 18px;
+  width: 22px;
+  height: 44px;
+  border-radius: 18px;
+}
+
+.armLeft {
+  left: -10px;
+  transform-origin: top center;
+  transform: rotate(20deg);
+}
+
+.armRight {
+  right: -10px;
+  transform-origin: top center;
+  transform: rotate(-20deg);
+}
+
+.wave .armRight {
+  animation: waveArm 1.8s ease-in-out infinite;
+}
+
+.cheer .armLeft {
+  animation: cheerArm 2s ease-in-out infinite;
+}
+
+.foot {
+  bottom: -8px;
+  width: 24px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.footLeft {
+  left: 16px;
+}
+
+.footRight {
+  right: 16px;
+}
+
+.badge {
+  position: absolute;
+  right: 14px;
+  top: 68px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+}
+
+.sparkA,
+.sparkB {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  filter: blur(1px);
+  animation: sparkPulse 2.4s ease-in-out infinite;
+}
+
+.sparkA {
+  left: 8px;
+  top: 20px;
+}
+
+.sparkB {
+  right: 4px;
+  top: 42px;
+  animation-delay: 0.5s;
+}
+
+.sprout {
+  --buddy-main: linear-gradient(180deg, #7ce53c, #58cc02);
+  --buddy-dark: #3ea000;
+}
+
+.comet {
+  --buddy-main: linear-gradient(180deg, #8ed1ff, #3b82f6);
+  --buddy-dark: #1f5fd2;
+}
+
+.miso {
+  --buddy-main: linear-gradient(180deg, #ffbc7d, #f97316);
+  --buddy-dark: #d65b0d;
+}
+
+.focus {
+  filter: saturate(0.95);
+}
+
+.celebrate {
+  filter: saturate(1.08);
+}
+
+@keyframes buddyFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes waveArm {
+  0%,
+  100% {
+    transform: rotate(-20deg);
+  }
+  50% {
+    transform: rotate(-58deg);
+  }
+}
+
+@keyframes cheerArm {
+  0%,
+  100% {
+    transform: rotate(20deg);
+  }
+  50% {
+    transform: rotate(54deg);
+  }
+}
+
+@keyframes sparkPulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .bubble {
+    max-width: min(100%, 300px);
+  }
+}

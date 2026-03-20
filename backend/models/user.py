@@ -1,30 +1,25 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-from bson import ObjectId
-from pydantic import BaseModel, EmailStr, Field
-
-
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source, _handler):
-        return _handler(ObjectId)
+from pydantic import EmailStr
+from sqlalchemy import Column
+from sqlmodel import Field, JSON, SQLModel
 
 
-class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    role: str = "user"
+class UserBase(SQLModel):
+    username: str = Field(index=True, unique=True)
+    email: EmailStr = Field(index=True, unique=True)
+    role: str = Field(default="user", index=True)
+
     native_language: Optional[str] = None
     target_language: Optional[str] = None
-    enrolled_languages: List[dict] = []
     cefr_level: str = "A1"
-    goals: List[str] = []
-    tutor_persona: Optional[str] = None
+    tutor_persona: Optional[str] = "friendly"
     tutor_name: Optional[str] = None
     daily_goal_minutes: int = 10
+
     xp: int = 0
     weekly_xp: int = 0
     total_xp: int = 0
@@ -35,44 +30,56 @@ class UserBase(BaseModel):
     hearts: int = 5
     hearts_last_refill: Optional[datetime] = None
     gems: int = 0
-    path_position: Optional[dict] = None
-    crown_levels: dict = {}
+
+    path_position: dict = Field(
+        default_factory=lambda: {
+            "section_index": 0,
+            "skill_index": 0,
+            "lesson_index": 0,
+            "exercise_index": 0,
+        },
+        sa_column=Column(JSON),
+    )
+    crown_levels: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    enrolled_languages: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    goals: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    friends: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    achievements_earned: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
     onboarding_complete: bool = False
     is_active: bool = True
     otp_enabled: bool = True
+    totp_secret: Optional[str] = None
+    totp_pending_secret: Optional[str] = None
+
     notification_time: str = "19:00"
     sounds_enabled: bool = True
     theme: str = "dark"
     immersion_mode: bool = False
-    avatar_color: Optional[str] = None
-    friends: List[PyObjectId] = []
+    avatar_color: str = "#3b82f6"
+
     global_rank: Optional[int] = None
-    achievements_earned: List[str] = []
     total_lessons_complete: int = 0
     total_words_learned: int = 0
     total_minutes_practiced: int = 0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
-    }
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-class UserCreate(BaseModel):
+class User(UserBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    hashed_password: str
+
+
+class UserCreate(SQLModel):
     username: str
     email: EmailStr
     password: str
-    native_language: str
-    target_language: str
+    native_language: Optional[str] = "english"
+    target_language: Optional[str] = "spanish"
 
 
 class UserResponse(UserBase):
-    id: str = Field(alias="_id")
+    id: int
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
-    }

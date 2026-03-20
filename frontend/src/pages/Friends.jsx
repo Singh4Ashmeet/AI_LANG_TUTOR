@@ -4,15 +4,16 @@ import styles from "./Friends.module.css";
 
 const Friends = () => {
   const [friends, setFriends] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [incoming, setIncoming] = useState([]);
+  const [outgoing, setOutgoing] = useState([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
 
   const load = async () => {
     const friendData = await api.get("/users/friends");
     setFriends(friendData.items || []);
-    // We need a way to get pending requests. Let's assume the backend search can show status or we need a new endpoint.
-    // For now, let's just implement the UI for the friends we have and the search results.
+    setIncoming(friendData.incoming || []);
+    setOutgoing(friendData.outgoing || []);
   };
 
   useEffect(() => {
@@ -43,9 +44,24 @@ const Friends = () => {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.eyebrow}>Friends</div>
-        <h2>Social Circle</h2>
-        <p>Connect with other learners to stay motivated.</p>
+        <h2>Build your language circle</h2>
+        <p>Challenge friends, accept incoming requests, and keep motivation social.</p>
       </header>
+
+      <section className={styles.summary}>
+        <article className={styles.summaryCard}>
+          <span>Friends</span>
+          <strong>{friends.length}</strong>
+        </article>
+        <article className={styles.summaryCard}>
+          <span>Incoming</span>
+          <strong>{incoming.length}</strong>
+        </article>
+        <article className={styles.summaryCard}>
+          <span>Pending sent</span>
+          <strong>{outgoing.length}</strong>
+        </article>
+      </section>
 
       <div className={styles.search}>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by username or email" />
@@ -74,6 +90,39 @@ const Friends = () => {
       )}
 
       <section className={styles.section}>
+        <h3>Incoming Requests</h3>
+        <div className={styles.list}>
+          {incoming.length === 0 && <p className={styles.empty}>No incoming requests right now.</p>}
+          {incoming.map((request) => (
+            <div key={request._id} className={styles.row}>
+              <div className={styles.userInfo}>
+                <span className={styles.username}>{request.user?.username}</span>
+                <span className={styles.level}>{request.user?.cefr_level || "A1"} learner</span>
+              </div>
+              <button type="button" className={styles.addBtn} onClick={() => acceptFriend(request.user?._id)}>
+                Accept
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <h3>Pending Requests</h3>
+        <div className={styles.list}>
+          {outgoing.length === 0 && <p className={styles.empty}>No pending requests sent.</p>}
+          {outgoing.map((request) => (
+            <div key={request._id} className={styles.row}>
+              <div className={styles.userInfo}>
+                <span className={styles.username}>{request.user?.username}</span>
+                <span className={styles.lang}>Waiting for reply</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
         <h3>Your Friends ({friends.length})</h3>
         <div className={styles.list}>
           {friends.length === 0 && <p className={styles.empty}>No friends yet. Start searching!</p>}
@@ -95,4 +144,3 @@ const Friends = () => {
 };
 
 export default Friends;
-

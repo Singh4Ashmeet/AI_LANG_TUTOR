@@ -1,63 +1,118 @@
 .page {
   display: grid;
   gap: 32px;
+  animation: slideUp 0.56s ease;
 }
 
 .hero {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 380px);
   gap: 24px;
-  align-items: center;
+  align-items: stretch;
+}
+
+.heroText,
+.heroCard,
+.featureCard {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.heroText {
+  border-radius: 28px;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(88, 204, 2, 0.18), transparent 30%),
+    linear-gradient(145deg, color-mix(in srgb, var(--card) 86%, #162617), color-mix(in srgb, var(--card) 78%, #15243a));
 }
 
 .heroText h1 {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 3vw, 3rem);
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  line-height: 0.98;
+  margin: 8px 0 12px;
 }
 
 .heroText p {
   color: var(--subtext);
   font-size: 15px;
+  max-width: 60ch;
+}
+
+.eyebrow,
+.heroLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  font-size: 12px;
   color: var(--accent);
 }
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .primary,
 .secondary {
   padding: 12px 18px;
-  border-radius: 14px;
-  font-weight: 700;
+  border-radius: 999px;
+  font-weight: 800;
 }
 
 .primary {
   background: var(--accent);
   color: #0d140f;
+  box-shadow: var(--glow);
 }
 
 .secondary {
   border: 1px solid var(--border);
   color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.signalRow {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.signalRow div {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.signalRow strong {
+  font-size: 14px;
+}
+
+.signalRow span {
+  color: var(--subtext);
+  font-size: 12px;
 }
 
 .heroCard {
-  background: var(--card);
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  padding: 20px;
+  background: linear-gradient(155deg, var(--card), color-mix(in srgb, var(--card) 82%, #1d3d2e));
+  border-radius: 28px;
+  padding: 22px;
   display: grid;
   gap: 14px;
-  box-shadow: var(--shadow);
+  animation: popIn 0.5s ease;
+}
+
+.heroLabel {
+  color: #86efac;
 }
 
 .heroStat {
@@ -65,9 +120,39 @@
   gap: 4px;
 }
 
+.heroStat strong {
+  font-size: 22px;
+}
+
 .heroStat span {
   color: var(--subtext);
   font-size: 12px;
+}
+
+.heroPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.heroPanel div {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+}
+
+.heroPanel span {
+  display: block;
+  color: var(--subtext);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.heroPanel strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
 }
 
 .features {
@@ -77,10 +162,15 @@
 }
 
 .featureCard {
-  background: var(--card);
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  padding: 16px;
+  background: linear-gradient(160deg, var(--card), color-mix(in srgb, var(--card) 86%, #21364f));
+  border-radius: 20px;
+  padding: 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glow);
 }
 
 .featureCard p {
@@ -92,4 +182,3 @@
     grid-template-columns: 1fr;
   }
 }
-

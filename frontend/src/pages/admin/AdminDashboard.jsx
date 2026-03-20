@@ -145,6 +145,28 @@ const AdminDashboard = () => {
           </div>
         </div>
       </section>
+
+      <section className={styles.workflow}>
+        <h3>Operational workflow</h3>
+        <div className={styles.workflowGrid}>
+          <div className={styles.workflowCard}>
+            <strong>Input</strong>
+            <span>Onboarding, lessons, chat, roleplay, voice, and practice events.</span>
+          </div>
+          <div className={styles.workflowCard}>
+            <strong>Processing</strong>
+            <span>Agent orchestration, error analysis, progression updates, and score computation.</span>
+          </div>
+          <div className={styles.workflowCard}>
+            <strong>Storage</strong>
+            <span>PostgreSQL records users, sessions, vocabulary, grammar, leaderboard, and logs.</span>
+          </div>
+          <div className={styles.workflowCard}>
+            <strong>Controls</strong>
+            <span>Admin can audit logs, edit users, force logout sessions, and test subsystems.</span>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

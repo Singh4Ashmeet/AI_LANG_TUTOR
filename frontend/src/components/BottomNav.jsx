@@ -4,11 +4,11 @@ import styles from "./BottomNav.module.css";
 
 const BottomNav = ({ ui }) => {
   const items = [
-    { to: "/dashboard", label: ui.learn, icon: "🏠" },
-    { to: "/tutor", label: ui.tutor, icon: "🗣️" },
-    { to: "/leaderboard", label: ui.league, icon: "🏆" },
-    { to: "/practice", label: ui.practice, icon: "📖" },
-    { to: "/profile", label: ui.profile, icon: "👤" }
+    { to: "/dashboard", label: ui.learn, icon: "\u{1F3E0}" },
+    { to: "/tutor", label: ui.tutor, icon: "\u{1F5E3}\u{FE0F}" },
+    { to: "/leaderboard", label: ui.league, icon: "\u{1F3C6}" },
+    { to: "/practice", label: ui.practice, icon: "\u{1F4D6}" },
+    { to: "/profile", label: ui.profile, icon: "\u{1F464}" },
   ];
 
   return (
@@ -28,4 +28,3 @@ const BottomNav = ({ ui }) => {
 };
 
 export default BottomNav;
-

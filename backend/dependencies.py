@@ -1,46 +1,46 @@
-from __future__ import annotations
-
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from bson import ObjectId
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
-from .auth import decode_access_token
-from .database import users_collection
+from .auth import decode_token
+from .database import get_session
+from .models.user import User
 from .services.sessions import validate_session
 
-bearer_scheme = HTTPBearer(auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/credentials")
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-):
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-
-    token = credentials.credentials
-    try:
-        payload = decode_access_token(token)
-    except ValueError:
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "access":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user_id = payload.get("user_id")
+    user_id = payload.get("sub")
     jti = payload.get("jti")
-    if not user_id or not jti:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    if user_id is None or jti is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
-    user = await users_collection().find_one({"_id": ObjectId(user_id)})
+    statement = select(User).where(User.id == int(user_id))
+    user = (await session.execute(statement)).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    session_ok = await validate_session(ObjectId(user_id), jti)
+
+    session_ok = await validate_session(session, user.id, jti)
     if not session_ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "signed_out_elsewhere", "message": "You were signed in on another device."},
         )
+
     return user
 
 
-async def require_admin(user=Depends(get_current_user)):
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return user
+

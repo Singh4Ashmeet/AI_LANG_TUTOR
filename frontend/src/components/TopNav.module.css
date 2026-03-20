@@ -7,7 +7,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  background: var(--nav-bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--nav-bg) 92%, transparent), var(--nav-bg));
   border-bottom: 1px solid var(--nav-border);
   backdrop-filter: blur(16px);
 }
@@ -27,11 +27,12 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-radius: 999px;
-  background: var(--soft);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--soft) 80%, white), var(--soft));
   border: 1px solid var(--border);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .flag {
@@ -39,8 +40,7 @@
 }
 
 .level {
-  font-size: 13px;
-  letter-spacing: 1px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -50,9 +50,18 @@
   gap: 10px;
   padding: 8px 12px;
   border-radius: 16px;
-  background: var(--card);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 84%, white), var(--card));
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+}
+
+button.statPill {
+  cursor: pointer;
+}
+
+button.statPill:hover {
+  box-shadow: var(--glow);
+  transform: translateY(-1px);
 }
 
 .statIcon {
@@ -62,7 +71,7 @@
 .statLabel {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.1em;
   color: var(--subtext);
 }
 
@@ -73,13 +82,17 @@
 
 .bell {
   position: relative;
-  border: none;
+  border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
   border-radius: 14px;
   padding: 10px;
   cursor: pointer;
-  border: 1px solid var(--border);
+}
+
+.bell:hover {
+  box-shadow: var(--glow);
+  transform: translateY(-1px);
 }
 
 .bellIcon {
@@ -117,7 +130,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .panelButton {
@@ -126,6 +139,7 @@
   color: var(--accent);
   cursor: pointer;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .panelList {
@@ -138,12 +152,12 @@
 .panelItem {
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--soft) 86%, transparent);
   border: 1px solid var(--border);
 }
 
 .read {
-  opacity: 0.6;
+  opacity: 0.62;
 }
 
 .panelTitle {
@@ -173,4 +187,3 @@
     display: none;
   }
 }
-

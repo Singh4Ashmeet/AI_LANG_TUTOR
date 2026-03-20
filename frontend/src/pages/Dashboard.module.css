@@ -1,123 +1,285 @@
 .page {
   display: grid;
   gap: 24px;
-  animation: slideUp 0.6s ease;
+  animation: slideUp 0.56s ease;
 }
 
 .hero {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 360px);
   gap: 20px;
-  align-items: center;
+  align-items: stretch;
+}
+
+.heroCopy,
+.goalCard,
+.wordSection,
+.spotlightCard {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.heroCopy {
+  border-radius: 28px;
+  padding: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(88, 204, 2, 0.18), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--card) 88%, #132018), color-mix(in srgb, var(--card) 78%, #12233a));
+  display: grid;
+  gap: 14px;
 }
 
 .hero h1 {
-  margin: 6px 0 8px;
+  margin: 0;
   font-family: var(--font-display);
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.04;
 }
 
 .hero p {
   color: var(--subtext);
+  max-width: 58ch;
 }
 
-.eyebrow {
+.eyebrow,
+.cardEyebrow {
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 12px;
+  letter-spacing: 0.16em;
+  font-size: 11px;
   color: var(--accent);
+  font-weight: 800;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryAction,
+.secondaryAction {
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.primaryAction {
+  background: var(--accent);
+  color: #09110a;
+  box-shadow: var(--glow);
+}
+
+.secondaryAction {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .goalCard {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 28px;
+  padding: 20px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 84%, #203b2a), color-mix(in srgb, var(--card) 82%, #08131f));
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: var(--shadow);
+  gap: 18px;
 }
 
 .goalRing {
-  width: 90px;
-  height: 90px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   display: grid;
   place-items: center;
 }
 
 .goalCenter {
-  width: 68px;
-  height: 68px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 90%, black);
   display: grid;
   place-items: center;
   text-align: center;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 800;
 }
 
-.goalCenter small {
-  font-size: 11px;
+.goalCenter span {
+  font-size: 24px;
+}
+
+.goalCenter small,
+.goalSub {
   color: var(--subtext);
 }
 
 .goalTitle {
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.goalSub {
-  font-size: 12px;
-  color: var(--subtext);
+.quickGrid,
+.spotlightGrid {
+  display: grid;
+  gap: 14px;
 }
 
-.wordSection {
-  background: var(--card);
+.quickGrid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.quickCard {
   border-radius: 20px;
   border: 1px solid var(--border);
   padding: 16px;
-  box-shadow: var(--shadow);
+  display: grid;
+  gap: 8px;
+  background: color-mix(in srgb, var(--card) 88%, #09111e);
+}
+
+.quickCard span {
+  color: var(--subtext);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.quickCard strong {
+  font-size: 28px;
+}
+
+.green {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 82%, #15391f), color-mix(in srgb, var(--card) 90%, #0b1118));
+}
+
+.blue {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 82%, #18324a), color-mix(in srgb, var(--card) 90%, #0b1118));
+}
+
+.gold {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 82%, #413319), color-mix(in srgb, var(--card) 90%, #0b1118));
+}
+
+.violet {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card) 82%, #30224a), color-mix(in srgb, var(--card) 90%, #0b1118));
+}
+
+.spotlightGrid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.spotlightCard {
+  border-radius: 24px;
+  padding: 20px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 88%, #111a28), color-mix(in srgb, var(--card) 84%, #1d2737));
+  display: grid;
+  gap: 14px;
+}
+
+.spotlightCard h3 {
+  margin: 0;
+}
+
+.snapshotList,
+.recommendList {
+  display: grid;
+  gap: 10px;
+}
+
+.snapshotList div,
+.recommendItem {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+}
+
+.snapshotList strong {
+  display: block;
+  font-size: 22px;
+}
+
+.snapshotList span,
+.recommendItem span {
+  color: var(--subtext);
+  font-size: 13px;
+}
+
+.recommendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.recommendItem:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.recommendItem strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.recommendItem em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.wordSection {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card) 90%, #132132), color-mix(in srgb, var(--card) 86%, #2a1d0f));
+  border-radius: 24px;
+  padding: 18px;
 }
 
 .wordHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .wordHeader button {
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--accent);
   cursor: pointer;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
 }
 
 .wordCard {
-  margin-top: 12px;
+  margin-top: 14px;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 18px;
+  padding: 16px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  animation: popIn 0.32s ease;
 }
 
 .wordTitle {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
 }
 
 .wordTranslation {
-  color: var(--subtext);
+  color: #fde68a;
+  font-size: 16px;
 }
 
 .wordExample {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .wordMeta {
-  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   color: var(--subtext);
+  font-size: 12px;
 }
 
 .pathSection {
@@ -135,19 +297,18 @@
 
 .fab {
   position: fixed;
-  bottom: 90px;
+  bottom: 96px;
   right: 18px;
   background: var(--accent);
   color: #0d140f;
   padding: 12px 18px;
   border-radius: 999px;
-  font-weight: 700;
+  font-weight: 800;
   box-shadow: var(--glow);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .hero {
     grid-template-columns: 1fr;
   }
 }
-

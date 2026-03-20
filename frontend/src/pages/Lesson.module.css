@@ -15,6 +15,64 @@
   gap: 12px;
 }
 
+.lessonIntro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--card) 86%, #13211a), color-mix(in srgb, var(--card) 82%, #16263b));
+  box-shadow: var(--shadow);
+}
+
+.lessonMeta h1 {
+  margin: 6px 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+}
+
+.lessonMeta p {
+  margin: 0;
+  color: var(--subtext);
+  max-width: 56ch;
+}
+
+.focusReason {
+  margin-top: 10px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.lessonBadge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.guidebookButton {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .progress {
   flex: 1;
   height: 10px;
@@ -50,6 +108,48 @@
   display: grid;
   gap: 16px;
   box-shadow: var(--shadow);
+}
+
+.exerciseHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exerciseMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.exerciseInstruction,
+.exerciseSafety {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.exerciseInstruction {
+  color: var(--subtext);
+}
+
+.answerMode {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(88, 204, 2, 0.12);
+  border: 1px solid rgba(88, 204, 2, 0.2);
+  color: #86efac;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.exerciseSafety {
+  color: #86efac;
 }
 
 .prompt {
@@ -216,6 +316,28 @@
   font-size: 13px;
 }
 
+.encouragement {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.hint,
+.grammarTip {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.hint {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+}
+
+.grammarTip {
+  background: rgba(88, 204, 2, 0.12);
+  border: 1px solid rgba(88, 204, 2, 0.18);
+}
+
 .tips {
   display: grid;
   gap: 16px;
@@ -268,8 +390,11 @@
 }
 
 @media (max-width: 720px) {
+  .lessonIntro {
+    flex-direction: column;
+  }
+
   .matchRow {
     grid-template-columns: 1fr;
   }
 }
-

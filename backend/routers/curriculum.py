@@ -1,67 +1,62 @@
 from __future__ import annotations
-
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, status
-
-from ..database import curriculum_collection
+from cachetools import TTLCache
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from ..database import get_session
 from ..dependencies import get_current_user
-from ..services.agents import call_lesson_architect
+from ..models.user import User
+from ..models.extra import Curriculum
 
 router = APIRouter(prefix="/curriculum", tags=["curriculum"])
 
-_curriculum_cache: dict[str, dict] = {}
+# Cache with 1 hour TTL, max 100 entries
+_curriculum_cache = TTLCache(maxsize=100, ttl=3600)
 
-
-def _language_pair(user: dict) -> str:
-    return f"{user.get('native_language', 'en')}-{user.get('target_language', 'es')}"
-
-
-async def _generate_curriculum(pair: str, user: dict) -> dict:
-    prompt = {
-        "role": "user",
-        "content": (
-            "Generate a curriculum JSON for a language pair with 5 sections and 40-60 skills total. "
-            "Each section must include 8-12 skills. Use skill_id as incrementing integers starting at 1. "
-            "Return JSON with: {language_pair, sections:[{section_index,title,description,color,emoji,"
-            "skills:[{skill_id,title,emoji,description,difficulty,tip_cards:[{title,explanation,examples:[{target,native}]}]}]}]}."
-            f" Language pair: {pair}."
-        ),
-    }
-    result = await call_lesson_architect([prompt], user)
-    if not isinstance(result, dict):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Curriculum generation failed")
-    result["language_pair"] = pair
-    result["generated_at"] = datetime.now(timezone.utc)
-    return result
-
+def _language_pair(user: User) -> str:
+    return f"{user.native_language or 'en'}-{user.target_language or 'es'}"
 
 @router.get("")
-async def get_curriculum(user=Depends(get_current_user)):
+async def get_curriculum(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
     pair = _language_pair(user)
     if pair in _curriculum_cache:
         return _curriculum_cache[pair]
-    existing = await curriculum_collection().find_one({"language_pair": pair})
+    
+    statement = select(Curriculum).where(Curriculum.language_pair == pair)
+    result = await session.execute(statement)
+    existing = result.scalar_one_or_none()
+    
     if existing:
-        existing["_id"] = str(existing["_id"])
-        _curriculum_cache[pair] = existing
-        return existing
-    generated = await _generate_curriculum(pair, user)
-    result = await curriculum_collection().insert_one(generated)
-    generated["_id"] = str(result.inserted_id)
-    _curriculum_cache[pair] = generated
-    return generated
-
+        # Convert to dict for cache and return
+        data = existing.model_dump()
+        data["id"] = existing.id
+        _curriculum_cache[pair] = data
+        return data
+    
+    raise HTTPException(status_code=404, detail="Curriculum not found. Please contact support.")
 
 @router.get("/skill/{skill_id}")
-async def get_skill(skill_id: str, user=Depends(get_current_user)):
-    curriculum = await get_curriculum(user)
+async def get_skill(
+    skill_id: str, 
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    curriculum = await get_curriculum(user, session)
     try:
-        skill_id_int = int(skill_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid skill id")
-    for section in curriculum.get("sections", []):
-        for skill in section.get("skills", []):
-            if int(skill.get("skill_id", -1)) == skill_id_int:
-                return {"skill": skill, "section": {"section_index": section.get("section_index"), "title": section.get("title")}}
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+        sid = int(skill_id)
+        for section in curriculum.get("sections", []):
+            for skill in section.get("skills", []):
+                if int(skill.get("skill_id", -1)) == sid:
+                    return {
+                        "skill": skill,
+                        "section": section,
+                        "tip_cards": skill.get("tip_cards", []),
+                        "lesson_count": 5,
+                    }
+    except Exception:
+        pass
+    raise HTTPException(status_code=404, detail="Skill not found")

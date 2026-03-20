@@ -7,7 +7,7 @@ const base = {
   streak: "Streak",
   gems: "Gems",
   hearts: "Hearts",
-  notifications: "Notifications"
+  notifications: "Notifications",
 };
 
 const translations = {
@@ -20,7 +20,7 @@ const translations = {
     streak: "Racha",
     gems: "Gemas",
     hearts: "Vidas",
-    notifications: "Notificaciones"
+    notifications: "Notificaciones",
   },
   french: {
     learn: "Apprendre",
@@ -28,21 +28,21 @@ const translations = {
     league: "Ligue",
     practice: "Pratique",
     profile: "Profil",
-    streak: "Série",
+    streak: "Serie",
     gems: "Gemmes",
     hearts: "Vies",
-    notifications: "Notifications"
+    notifications: "Notifications",
   },
   german: {
     learn: "Lernen",
     tutor: "Tutor",
     league: "Liga",
-    practice: "Üben",
+    practice: "Uben",
     profile: "Profil",
     streak: "Serie",
     gems: "Edelsteine",
     hearts: "Leben",
-    notifications: "Benachrichtigungen"
+    notifications: "Benachrichtigungen",
   },
   italian: {
     learn: "Impara",
@@ -53,7 +53,7 @@ const translations = {
     streak: "Serie",
     gems: "Gemme",
     hearts: "Vite",
-    notifications: "Notifiche"
+    notifications: "Notifiche",
   },
   portuguese: {
     learn: "Aprender",
@@ -61,33 +61,33 @@ const translations = {
     league: "Liga",
     practice: "Praticar",
     profile: "Perfil",
-    streak: "Sequência",
+    streak: "Sequencia",
     gems: "Gemas",
     hearts: "Vidas",
-    notifications: "Notificações"
+    notifications: "Notificacoes",
   },
   japanese: {
-    learn: "学ぶ",
-    tutor: "チューター",
-    league: "リーグ",
-    practice: "練習",
-    profile: "プロフィール",
-    streak: "連続",
-    gems: "ジェム",
-    hearts: "ハート",
-    notifications: "通知"
+    learn: "Manabu",
+    tutor: "Chuta",
+    league: "Rigu",
+    practice: "Renshu",
+    profile: "Purofiru",
+    streak: "Renzoku",
+    gems: "Jemu",
+    hearts: "Hato",
+    notifications: "Tsuchi",
   },
   korean: {
-    learn: "학습",
-    tutor: "튜터",
-    league: "리그",
-    practice: "연습",
-    profile: "프로필",
-    streak: "연속",
-    gems: "젬",
-    hearts: "하트",
-    notifications: "알림"
-  }
+    learn: "Haksub",
+    tutor: "Tyuteo",
+    league: "Ligeu",
+    practice: "Yeonseub",
+    profile: "Peuropil",
+    streak: "Yeonsok",
+    gems: "Jem",
+    hearts: "Hateu",
+    notifications: "Allim",
+  },
 };
 
 export const getUiStrings = (targetLanguage, immersionMode) => {
@@ -96,19 +96,16 @@ export const getUiStrings = (targetLanguage, immersionMode) => {
   return translations[key] || base;
 };
 
-export const getTargetFlag = (targetLanguage) => {
-  const key = (targetLanguage || "").toLowerCase();
-  const flags = {
-    spanish: "🇪🇸",
-    french: "🇫🇷",
-    german: "🇩🇪",
-    italian: "🇮🇹",
-    portuguese: "🇵🇹",
-    japanese: "🇯🇵",
-    korean: "🇰🇷",
-    chinese: "🇨🇳",
-    english: "🇺🇸"
-  };
-  return flags[key] || "🌍";
+const FLAGS = {
+  spanish: "\u{1F1EA}\u{1F1F8}",
+  french: "\u{1F1EB}\u{1F1F7}",
+  german: "\u{1F1E9}\u{1F1EA}",
+  italian: "\u{1F1EE}\u{1F1F9}",
+  portuguese: "\u{1F1F5}\u{1F1F9}",
+  japanese: "\u{1F1EF}\u{1F1F5}",
+  korean: "\u{1F1F0}\u{1F1F7}",
+  chinese: "\u{1F1E8}\u{1F1F3}",
+  english: "\u{1F1FA}\u{1F1F8}",
 };
 
+export const getTargetFlag = (targetLanguage) => FLAGS[(targetLanguage || "").toLowerCase()] || "\u{1F310}";

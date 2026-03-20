@@ -1,93 +1,127 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from bson import ObjectId
+from datetime import datetime, timedelta, timezone
 
-from ..database import achievements_collection, users_collection, notifications_collection
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import desc, func, select
 
-ACHIEVEMENTS = [
-    {"achievement_id": "first_lesson", "title": "First Lesson", "description": "Complete any lesson", "icon": "✅", "xp_reward": 10, "condition_type": "lessons", "condition_value": 1, "rarity": "common"},
-    {"achievement_id": "first_streak", "title": "First Streak", "description": "Reach a 3-day streak", "icon": "🔥", "xp_reward": 15, "condition_type": "streak", "condition_value": 3, "rarity": "common"},
-    {"achievement_id": "word_collector", "title": "Word Collector", "description": "Add 10 vocabulary words", "icon": "📚", "xp_reward": 10, "condition_type": "words", "condition_value": 10, "rarity": "common"},
-    {"achievement_id": "quick_learner", "title": "Quick Learner", "description": "Complete 5 lessons in one day", "icon": "⚡", "xp_reward": 20, "condition_type": "custom", "condition_value": 5, "rarity": "common"},
-    {"achievement_id": "week_warrior", "title": "Week Warrior", "description": "Reach a 7-day streak", "icon": "🏆", "xp_reward": 25, "condition_type": "streak", "condition_value": 7, "rarity": "rare"},
-    {"achievement_id": "half_century", "title": "Half Century", "description": "Complete 50 lessons", "icon": "🎯", "xp_reward": 50, "condition_type": "lessons", "condition_value": 50, "rarity": "rare"},
-    {"achievement_id": "vocab_champion", "title": "Vocabulary Champion", "description": "Master 100 words", "icon": "📘", "xp_reward": 50, "condition_type": "words", "condition_value": 100, "rarity": "rare"},
-    {"achievement_id": "perfect_week", "title": "Perfect Week", "description": "7 perfect lessons in a row", "icon": "⭐", "xp_reward": 60, "condition_type": "perfect", "condition_value": 7, "rarity": "rare"},
-    {"achievement_id": "roleplay_rookie", "title": "Roleplay Rookie", "description": "Complete all 8 base scenarios", "icon": "🎭", "xp_reward": 40, "condition_type": "custom", "condition_value": 8, "rarity": "rare"},
-    {"achievement_id": "month_master", "title": "Month Master", "description": "Reach a 30-day streak", "icon": "📅", "xp_reward": 80, "condition_type": "streak", "condition_value": 30, "rarity": "epic"},
-    {"achievement_id": "section_conqueror", "title": "Section Conqueror", "description": "Complete any full section", "icon": "🧭", "xp_reward": 80, "condition_type": "custom", "condition_value": 1, "rarity": "epic"},
-    {"achievement_id": "grammarian", "title": "Grammarian", "description": "Reduce all grammar error rates below 20%", "icon": "🧠", "xp_reward": 80, "condition_type": "custom", "condition_value": 20, "rarity": "epic"},
-    {"achievement_id": "dual_linguist", "title": "Dual Linguist", "description": "Enroll in a second language", "icon": "🌐", "xp_reward": 80, "condition_type": "custom", "condition_value": 2, "rarity": "epic"},
-    {"achievement_id": "journal_keeper", "title": "Journal Keeper", "description": "Write 10 journal entries", "icon": "📓", "xp_reward": 80, "condition_type": "custom", "condition_value": 10, "rarity": "epic"},
-    {"achievement_id": "century_streak", "title": "Century Streak", "description": "Reach a 100-day streak", "icon": "💯", "xp_reward": 150, "condition_type": "streak", "condition_value": 100, "rarity": "legendary"},
-    {"achievement_id": "polyglot", "title": "Polyglot", "description": "Reach B2 in any language", "icon": "🌟", "xp_reward": 150, "condition_type": "custom", "condition_value": 1, "rarity": "legendary"},
-    {"achievement_id": "crown_royale", "title": "Crown Royale", "description": "Get all crowns to Level 3+", "icon": "👑", "xp_reward": 150, "condition_type": "crowns", "condition_value": 3, "rarity": "legendary"},
-    {"achievement_id": "immersionist", "title": "The Immersionist", "description": "Use Immersion Mode for 7 days straight", "icon": "🛰️", "xp_reward": 150, "condition_type": "custom", "condition_value": 7, "rarity": "legendary"},
-    {"achievement_id": "fluency_master", "title": "Fluency Master", "description": "Reach C1 level", "icon": "🏅", "xp_reward": 150, "condition_type": "custom", "condition_value": 1, "rarity": "legendary"},
+from ..models.extra import Achievement, UserAchievement
+from ..models.session import Session
+from ..models.user import User
+from ..models.vocabulary import VocabularyItem
+
+
+ACHIEVEMENTS_DATA = [
+    {"achievement_id": "first-lesson", "title": "First Lesson", "description": "Complete any lesson", "icon": "first_lesson", "xp_reward": 10, "condition_type": "lessons", "condition_value": 1, "rarity": "common"},
+    {"achievement_id": "first-streak", "title": "First Streak", "description": "Reach a 3-day streak", "icon": "first_streak", "xp_reward": 15, "condition_type": "streak", "condition_value": 3, "rarity": "common"},
+    {"achievement_id": "word-collector", "title": "Word Collector", "description": "Add 10 vocabulary words", "icon": "word_collector", "xp_reward": 10, "condition_type": "words", "condition_value": 10, "rarity": "common"},
+    {"achievement_id": "quick-learner", "title": "Quick Learner", "description": "Complete 5 lessons in one day", "icon": "quick_learner", "xp_reward": 20, "condition_type": "custom", "condition_value": 5, "rarity": "common"},
+    {"achievement_id": "week-warrior", "title": "Week Warrior", "description": "Reach a 7-day streak", "icon": "week_warrior", "xp_reward": 25, "condition_type": "streak", "condition_value": 7, "rarity": "rare"},
+    {"achievement_id": "half-century", "title": "Half Century", "description": "Complete 50 lessons", "icon": "half_century", "xp_reward": 40, "condition_type": "lessons", "condition_value": 50, "rarity": "rare"},
+    {"achievement_id": "vocabulary-champion", "title": "Vocabulary Champion", "description": "Master 100 words", "icon": "vocab_champion", "xp_reward": 50, "condition_type": "words_mastered", "condition_value": 100, "rarity": "rare"},
+    {"achievement_id": "month-master", "title": "Month Master", "description": "Reach a 30-day streak", "icon": "month_master", "xp_reward": 80, "condition_type": "streak", "condition_value": 30, "rarity": "epic"},
+    {"achievement_id": "century-streak", "title": "Century Streak", "description": "Reach a 100-day streak", "icon": "century_streak", "xp_reward": 150, "condition_type": "streak", "condition_value": 100, "rarity": "legendary"},
 ]
 
 
-async def seed_achievements() -> None:
-    now = datetime.now(timezone.utc)
-    for achievement in ACHIEVEMENTS:
-        doc = {**achievement, "created_at": now}
-        await achievements_collection().update_one(
-            {"achievement_id": achievement["achievement_id"]},
-            {"$setOnInsert": doc},
-            upsert=True,
+async def seed_achievements(session: AsyncSession) -> None:
+    for data in ACHIEVEMENTS_DATA:
+        statement = select(Achievement).where(Achievement.achievement_id == data["achievement_id"])
+        existing = (await session.execute(statement)).scalar_one_or_none()
+        if existing:
+            continue
+        session.add(Achievement(**data))
+    await session.commit()
+
+
+async def _has_perfect_week(session: AsyncSession, user_id: int) -> bool:
+    seven_days = datetime.utcnow() - timedelta(days=7)
+    stmt = (
+        select(func.count())
+        .select_from(Session)
+        .where(
+            Session.user_id == user_id,
+            Session.session_type == "lesson",
+            Session.started_at >= seven_days,
+            Session.accuracy_percent == 100,
         )
+    )
+    return ((await session.execute(stmt)).scalar() or 0) >= 7
 
 
-async def check_and_award_achievements(user_id: str) -> list[dict]:
-    user = await users_collection().find_one({"_id": ObjectId(user_id)})
+async def _is_achievement_met(session: AsyncSession, user: User, ach: Achievement) -> bool:
+    if ach.condition_type == "streak":
+        return user.streak >= ach.condition_value
+    if ach.condition_type == "xp":
+        return user.total_xp >= ach.condition_value
+    if ach.condition_type == "lessons":
+        return user.total_lessons_complete >= ach.condition_value
+    if ach.condition_type == "words":
+        stmt = select(func.count()).select_from(VocabularyItem).where(VocabularyItem.user_id == user.id)
+        return ((await session.execute(stmt)).scalar() or 0) >= ach.condition_value
+    if ach.condition_type == "words_mastered":
+        stmt = (
+            select(func.count())
+            .select_from(VocabularyItem)
+            .where(VocabularyItem.user_id == user.id, VocabularyItem.status == "mastered")
+        )
+        return ((await session.execute(stmt)).scalar() or 0) >= ach.condition_value
+    if ach.condition_type == "perfect":
+        return await _has_perfect_week(session, user.id)
+    if ach.condition_type == "custom":
+        if ach.achievement_id == "quick-learner":
+            today = datetime.utcnow().date()
+            start = datetime(today.year, today.month, today.day)
+            end = start + timedelta(days=1)
+            stmt = (
+                select(func.count())
+                .select_from(Session)
+                .where(
+                    Session.user_id == user.id,
+                    Session.session_type == "lesson",
+                    Session.started_at >= start,
+                    Session.started_at < end,
+                )
+            )
+            return ((await session.execute(stmt)).scalar() or 0) >= ach.condition_value
+        return False
+    return False
+
+
+async def check_and_award_achievements(session: AsyncSession, user_id: int) -> list[Achievement]:
+    user_stmt = select(User).where(User.id == user_id)
+    user = (await session.execute(user_stmt)).scalar_one_or_none()
     if not user:
         return []
 
-    earned_ids = set(user.get("achievements", []))
-    all_achievements = await achievements_collection().find({}).to_list(length=100)
-    
-    newly_earned = []
-    now = datetime.now(timezone.utc)
+    earned_stmt = select(UserAchievement.achievement_id).where(UserAchievement.user_id == user_id)
+    earned_ids = set((await session.execute(earned_stmt)).scalars().all())
+
+    all_stmt = select(Achievement).order_by(desc(Achievement.xp_reward))
+    all_achievements = (await session.execute(all_stmt)).scalars().all()
+
+    now = datetime.utcnow()
+    newly_earned: list[Achievement] = []
+    earned_list = list(user.achievements_earned or [])
 
     for ach in all_achievements:
-        ach_id = ach["achievement_id"]
-        if ach_id in earned_ids:
+        if ach.achievement_id in earned_ids:
             continue
-        
-        condition_type = ach.get("condition_type")
-        condition_value = ach.get("condition_value")
-        is_met = False
+        if not await _is_achievement_met(session, user, ach):
+            continue
 
-        if condition_type == "lessons":
-            if int(user.get("total_lessons_complete", 0)) >= int(condition_value):
-                is_met = True
-        elif condition_type == "streak":
-            if int(user.get("streak", 0)) >= int(condition_value):
-                is_met = True
-        elif condition_type == "xp":
-            if int(user.get("xp", 0)) >= int(condition_value):
-                is_met = True
-        # More complex conditions can be added here
-        
-        if is_met:
-            newly_earned.append(ach)
-            await users_collection().update_one(
-                {"_id": ObjectId(user_id)},
-                {
-                    "$addToSet": {"achievements": ach_id},
-                    "$inc": {"xp": ach.get("xp_reward", 0)}
-                }
-            )
-            # Create notification
-            await notifications_collection().insert_one({
-                "user_id": ObjectId(user_id),
-                "type": "achievement",
-                "title": f"Achievement Earned: {ach['title']}",
-                "message": ach["description"],
-                "icon": ach.get("icon", "🏆"),
-                "is_read": False,
-                "created_at": now
-            })
+        newly_earned.append(ach)
+        session.add(UserAchievement(user_id=user_id, achievement_id=ach.achievement_id, earned_at=now))
+
+        user.xp += ach.xp_reward
+        user.total_xp += ach.xp_reward
+        earned_list.append(ach.achievement_id)
+
+    if newly_earned:
+        user.achievements_earned = earned_list
+        user.updated_at = now
+        session.add(user)
+        await session.commit()
 
     return newly_earned
+

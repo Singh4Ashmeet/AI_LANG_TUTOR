@@ -1,41 +1,41 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Optional
 
-from bson import ObjectId
-from pydantic import BaseModel, Field
-
-
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source, _handler):
-        return _handler(ObjectId)
+from sqlalchemy import Column
+from sqlmodel import Field, JSON, SQLModel
 
 
-class Message(BaseModel):
-    role: str
-    content: str
-    timestamp: datetime
-    errors: List[dict] = []
-    new_vocabulary: List[str] = []
+class SessionExercise(SQLModel):
+    type: str
+    content: Optional[str] = None
+    user_answer: Any = None
+    correct_answer: Any = None
+    is_correct: Optional[bool] = None
+    time_ms: Optional[int] = None
 
 
-class Session(BaseModel):
-    id: str = Field(alias="_id")
-    user_id: str
-    session_type: str
+class Session(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    session_type: str = Field(index=True)
+    skill_id: Optional[str] = None
+    lesson_index: Optional[int] = None
     scenario: Optional[str] = None
-    messages: List[Message] = []
+
+    messages: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    exercises: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+
     xp_earned: int = 0
+    accuracy_percent: int = 0
+    hearts_lost: int = 0
     duration_seconds: int = 0
     grammar_errors_count: int = 0
     vocabulary_added_count: int = 0
-    started_at: datetime
+    summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    coach_tip: Optional[str] = None
+
+    started_at: datetime = Field(default_factory=datetime.utcnow)
     ended_at: Optional[datetime] = None
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
-    }

@@ -5,7 +5,10 @@ import tempfile
 from pathlib import Path
 from functools import partial
 
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel
+except Exception:  # pragma: no cover - optional dependency at runtime
+    WhisperModel = None  # type: ignore[assignment]
 import edge_tts
 
 from ..config import settings
@@ -38,7 +41,9 @@ PERSONA_VOICE = {
 def load_whisper_model() -> None:
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel(settings.whisper_model, device="cpu", compute_type="int8")
+        if WhisperModel is None:
+            raise RuntimeError("faster-whisper is not installed")
+        _whisper_model = WhisperModel(settings.WHISPER_MODEL, device="cpu", compute_type="int8")
 
 
 def get_whisper_model() -> WhisperModel:
